@@ -20,21 +20,23 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
   return (
     <aside
       className={`
-      fixed lg:relative
-      ${isCollapsed ? "w-12" : "w-50"}
-      h-screen py-6 flex flex-col
-      bg-white dark:bg-gray-900
-      transition-all duration-300
-      z-40
-    `}
+        fixed lg:relative
+        ${isCollapsed ? "w-12" : "w-50"}
+        h-screen py-6 flex flex-col
+        bg-white dark:bg-gray-900
+        transition-all duration-300
+        z-40
+      `}
     >
-      <CollapseButton
-        isCollapsed={isCollapsed}
-        toggleCollapse={toggleCollapse}
-      />
-
       <nav className="flex-1 px-2">
         <ul className="space-y-2">
+          <li>
+            <CollapseButton
+              isCollapsed={isCollapsed}
+              toggleCollapse={toggleCollapse}
+            />
+          </li>
+
           {items.map(({ href, icon: Icon, label }) => (
             <li key={href}>
               <Link
