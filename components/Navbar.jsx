@@ -1,20 +1,47 @@
 "use client";
 import { Search, Bell, User, PhoneCall, LogOut } from "lucide-react";
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import SettingsDropdown from "./SettingsDropdown";
 import { useTheme } from "./ThemeContext";
+import { useSession } from "next-auth/react";
+import { db } from "@/lib/firebaseConfig";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import UserInfo from "./UserInfo";
+import NotificationList from "./NotificationList";
+import SearchBar from "./SearchBar";
 
 export default function Navbar() {
-  const { isDarkMode, toggleTheme } = useTheme();
-
-  const handleLogout = () => {
-    window.location.href = '/login';
-  };
+  const { isDarkMode } = useTheme();
+  const { data: session } = useSession();
+  const [notifications, setNotifications] = useState([]);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
-  }, []);
+    if (session?.user?.email) {
+      const fetchNotifications = async () => {
+        try {
+          const q = query(
+            collection(db, "notifications"),
+            where("userId", "==", session.user.email),
+            where("read", "==", false)
+          );
+          const querySnapshot = await getDocs(q);
+          setNotifications(
+            querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [session]);
+
+  const handleLogout = () => {
+    window.location.href = "/ERING";
+  };
 
   return (
     <nav className="flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow bg-white dark:bg-gray-900">
@@ -28,30 +55,54 @@ export default function Navbar() {
       </div>
 
       <div className="flex">
-        <div className="relative w-50 lg:w-100 md:w-90 sm:w-80">
-          <Search className="absolute top-1/2 left-1 w-3 h-3 md:w-5 md:h-5 sm:w-3 sm:h-3 transform -translate-y-1/2 text-gray-900 dark:text-white" />
-          <input
-            type="text"
-            placeholder="Search product group"
-            className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white w-full lg:h-10 md:h-8 sm:h-7 h-7 pl-5 sm:pl-6 md:pl-7 lg:pl-8 pr-2 sm:pr-4 py-2 rounded-lg focus:outline-none focus:ring text-xs sm:text-sm md:text-base lg:text-lg border-2 border-gray-400 dark:border-gray-50"
-          />
-        </div>
+        <SearchBar onSearch={(term) => console.log("Search term:", term)} />
       </div>
 
       <div className="hidden items-center gap-8 lg:flex">
         <ThemeToggle />
-        
-        <button className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full">
-          <Bell className="w-6 h-6" />
-        </button>
 
-        <Link href="/profile" className="border-l-2 border-gray-900 dark:border-white pl-5">
-          <User className="w-6 h-6 text-gray-900 dark:text-white" />
-        </Link>
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              setShowProfileDropdown(false);
+            }}
+            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full relative"
+          >
+            <Bell className="w-6 h-6" />
+            {notifications.length > 0 && (
+              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+              <NotificationList onClose={() => setShowNotifications(false)} />
+            </div>
+          )}
+        </div>
 
-        <button 
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowProfileDropdown(!showProfileDropdown);
+              setShowNotifications(false);
+            }}
+            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
+          >
+            <User className="w-6 h-6" />
+          </button>
+          {showProfileDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+              <UserInfo />
+            </div>
+          )}
+        </div>
+
+        <button
           onClick={handleLogout}
-          className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
+          className="text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
         >
           <LogOut className="w-6 h-6" />
         </button>

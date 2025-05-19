@@ -1,25 +1,28 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { User, Sun, Moon, Bell, Settings, LogOut } from 'lucide-react';
-import { useTheme } from './ThemeContext';
-import Link from 'next/link';
+"use client";
+import { useState, useEffect } from "react";
+import { Sun, Moon, Bell, Settings, LogOut } from "lucide-react";
+import { useTheme } from "./ThemeContext";
+import UserInfo from "./UserInfo";
+import NotificationList from "./NotificationList";
 
 export default function SettingsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const { isDarkMode, toggleTheme } = useTheme();
 
   const handleLogout = () => {
-    window.location.href = '/login';
+    window.location.href = "/login";
   };
 
   useEffect(() => {
     const closeDropdown = (e) => {
-      if (!e.target.closest('.dropdown-container')) {
+      if (!e.target.closest(".dropdown-container")) {
         setIsOpen(false);
+        setShowNotifications(false);
       }
     };
-    window.addEventListener('click', closeDropdown);
-    return () => window.removeEventListener('click', closeDropdown);
+    window.addEventListener("click", closeDropdown);
+    return () => window.removeEventListener("click", closeDropdown);
   }, []);
 
   return (
@@ -32,16 +35,11 @@ export default function SettingsDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
-          {/* Profile */}
-          <Link
-            href="/profile"
-            className="flex items-center px-4 py-2 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <User className="w-5 h-5 mr-3" />
-            Profile
-          </Link>
-
+        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+          <div className="px-4 py-2">
+            <UserInfo />
+          </div>
+          <hr className="my-2" />
           <button
             onClick={toggleTheme}
             className="flex items-center px-4 py-2 w-full text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -51,14 +49,20 @@ export default function SettingsDropdown() {
             ) : (
               <Moon className="w-5 h-5 mr-3" />
             )}
-            {isDarkMode ? 'Light' : 'Dark'}
+            {isDarkMode ? "Light" : "Dark"}
           </button>
-
-          <button className="flex items-center px-4 py-2 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 w-full">
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="flex items-center px-4 py-2 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 w-full"
+          >
             <Bell className="w-5 h-5 mr-3" />
             Notifications
           </button>
-
+          {showNotifications && (
+            <div className="px-4 py-2">
+              <NotificationList onClose={() => setShowNotifications(false)} />
+            </div>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center px-4 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 w-full"

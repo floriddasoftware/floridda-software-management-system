@@ -1,19 +1,27 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Home, Box, DollarSign, PlusSquare } from "lucide-react";
 import CollapseButton from "./CollapseButton";
 import Footer from "./Footer";
 
 export default function Sidebar({ isCollapsed, toggleCollapse }) {
+  const { data: session } = useSession();
   const path = usePathname() || "";
 
-  const items = [
-    { href: "/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/products", icon: Box, label: "Products" },
-    { href: "/sales", icon: DollarSign, label: "Sales" },
-    { href: "/add", icon: PlusSquare, label: "Add" },
-  ];
+  const items =
+    session?.user?.role === "admin"
+      ? [
+          { href: "/dashboard", icon: Home, label: "Dashboard" },
+          { href: "/products", icon: Box, label: "Products" },
+          { href: "/sales", icon: DollarSign, label: "Sales" },
+          { href: "/add", icon: PlusSquare, label: "Add" },
+        ]
+      : [
+          { href: "/dashboard", icon: Home, label: "Dashboard" },
+          { href: "/sales", icon: DollarSign, label: "Sales" },
+        ];
 
   return (
     <aside
@@ -33,7 +41,6 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
               toggleCollapse={toggleCollapse}
             />
           </li>
-
           {items.map(({ href, icon: Icon, label }) => (
             <li key={href}>
               <Link
@@ -53,9 +60,8 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
           ))}
         </ul>
       </nav>
-
       {!isCollapsed && (
-        <div className="mt-auto px-2 border-t-2 border-gray-900 dark:border-white shrink-0">
+        <div className="mt-auto px-2 border-t-2 border-gray-900 dark:border-white shrink-0 text-center">
           <Footer />
         </div>
       )}

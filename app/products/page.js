@@ -1,10 +1,19 @@
 "use client";
 import { useState } from "react";
 import { db } from "@/lib/firebaseConfig";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+  addDoc,
+} from "firebase/firestore";
 import RegisterProduct from "@/components/RegisterProduct";
-import ProductList from "@/components/ProductList";
-import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
+import Table from "@/components/Table";
+import Modal from "@/components/Modal";
+import Button from "@/components/Button";
+import { Edit, Trash } from "lucide-react";
 
 export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
@@ -32,16 +41,16 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDelete = (id) => {
-    setProductToDelete(id);
+  const handleDelete = (product) => {
+    setProductToDelete(product);
     setShowConfirmDelete(true);
   };
 
   const confirmDelete = async () => {
     if (productToDelete) {
       try {
-        await deleteDoc(doc(db, "products", productToDelete));
-        setProducts(products.filter((p) => p.id !== productToDelete));
+        await deleteDoc(doc(db, "products", productToDelete.id));
+        setProducts(products.filter((p) => p.id !== productToDelete.id));
       } catch (error) {
         console.error("Error deleting product:", error);
       }
@@ -55,25 +64,41 @@ export default function ProductsPage() {
     setShowModal(true);
   };
 
+  const columns = [
+    { key: "item", label: "Item" },
+    { key: "quantity", label: "Quantity" },
+    { key: "amountPerUnit", label: "Amount/Unit" },
+    { key: "modelNumber", label: "Model" },
+    { key: "serialNumber", label: "Serial" },
+    { key: "category", label: "Category" },
+    { key: "subCategory", label: "Sub Category" },
+  ];
+
+  const actions = [
+    {
+      onClick: handleEdit,
+      icon: <Edit className="w-5 h-5 text-blue-600" />,
+    },
+    {
+      onClick: handleDelete,
+      icon: <Trash className="w-5 h-5 text-red-600" />,
+    },
+  ];
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between mb-8">
-        <button
-          onClick={fetchProducts}
-          className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg disabled:bg-gray-500"
-          disabled={loading}
-        >
+        <Button onClick={fetchProducts} disabled={loading}>
           {loading ? "Loading..." : "View"}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => {
             setProductToEdit(null);
             setShowModal(true);
           }}
-          className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg"
         >
           Register
-        </button>
+        </Button>
       </div>
 
       {showModal && (
@@ -88,11 +113,7 @@ export default function ProductsPage() {
         <p className="text-gray-900 dark:text-white">Loading products...</p>
       ) : hasFetched ? (
         products.length > 0 ? (
-          <ProductList
-            products={products}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+          <Table columns={columns} data={products} actions={actions} />
         ) : (
           <p className="text-gray-900 dark:text-white">No products found.</p>
         )
@@ -102,11 +123,24 @@ export default function ProductsPage() {
         </p>
       )}
 
-      <ConfirmDeleteModal
+      <Modal
         isOpen={showConfirmDelete}
         onClose={() => setShowConfirmDelete(false)}
-        onConfirm={confirmDelete}
-      />
+        title="Confirm Deletion"
+      >
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Are you sure you want to delete this product?
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
+          <Button
+            onClick={confirmDelete}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Delete
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
