@@ -1,7 +1,6 @@
 "use client";
-import { Search, Bell, User, PhoneCall, LogOut, Sun, Moon } from "lucide-react";
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { Search, Bell, User, PhoneCall, LogOut } from "lucide-react";
+import { useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
 import SettingsDropdown from "./SettingsDropdown";
@@ -11,7 +10,6 @@ export default function Navbar() {
   const { isDarkMode, toggleTheme } = useTheme();
 
   const handleLogout = () => {
-    // Add actual logout logic here
     window.location.href = '/login';
   };
 

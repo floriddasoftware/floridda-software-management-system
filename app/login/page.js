@@ -3,23 +3,25 @@ import Image from "next/image";
 import { Smartphone, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useTheme } from "@/components/ThemeContext";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const { isDarkMode, toggleTheme } = useTheme();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
+    setLoading(true);
     const res = await signIn("nodemailer", {
       email: email,
       redirect: false,
       callbackUrl: "/dashboard",
     });
+    setLoading(false);
     if (res?.error) {
       setError("Failed to send login email.");
     } else {
@@ -30,16 +32,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 shadow-lg">
-      <button
-        onClick={toggleTheme}
-        className="absolute top-4 right-4 p-2 rounded-full bg-gray-50 dark:bg-gray-900"
-      >
-        {isDarkMode ? (
-          <Sun className="w-4 h-4" />
-        ) : (
-          <Moon className="w-4 h-4" />
-        )}
-      </button>
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
 
       <div className="bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-400 rounded-xl overflow-hidden flex flex-col md:flex-row w-full max-w-6xl shadow-2xl">
         <div className="hidden md:block relative md:w-1/2">
@@ -56,7 +51,9 @@ export default function LoginPage() {
             <Smartphone className="h-12 w-12 text-purple-600" />
             <p className="mt-1 text-gray-600 dark:text-gray-100">
               Welcome to{" "}
-              <span className="font-semibold text-gray-900 dark:text-white">Floridda Software</span>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                Floridda Software
+              </span>
             </p>
           </div>
 
@@ -82,14 +79,16 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
               className="w-full py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition cursor-pointer"
+              disabled={loading}
             >
-              Login
+              {loading ? "Sending..." : "Login"}
             </button>
 
             {error && (

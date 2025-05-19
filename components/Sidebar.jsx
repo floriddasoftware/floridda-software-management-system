@@ -1,6 +1,4 @@
-// components/Sidebar.jsx
 "use client";
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Box, DollarSign, PlusSquare } from "lucide-react";
@@ -21,14 +19,13 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
     <aside
       className={`
         fixed lg:relative
-        ${isCollapsed ? "w-12" : "w-50"}
-        h-screen py-6 flex flex-col
+        ${isCollapsed ? "w-12" : "w-40"}
+        h-[calc(100vh-4rem)] py-6 flex flex-col
         bg-white dark:bg-gray-900
-        transition-all duration-300
         z-40
       `}
     >
-      <nav className="flex-1 px-2">
+      <nav className="flex-1 px-2 overflow-y-auto">
         <ul className="space-y-2">
           <li>
             <CollapseButton
@@ -58,7 +55,7 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
       </nav>
 
       {!isCollapsed && (
-        <div className="mt-auto px-2">
+        <div className="mt-auto px-2 border-t-2 border-gray-900 dark:border-white shrink-0">
           <Footer />
         </div>
       )}

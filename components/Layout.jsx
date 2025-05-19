@@ -33,7 +33,7 @@ export default function Layout({ children }) {
         <main className={`
           flex-1 
           transition-all duration-300 
-          ${isCollapsed ? "ml-10" : "ml-50"}
+          ${isCollapsed ? "ml-10" : "-ml-5"}
           min-h-[calc(100vh-4rem)]
           p-4
         `}>
