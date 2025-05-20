@@ -41,20 +41,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user }) {
       const adminEmail = "eromotoya@gmail.com";
       if (user.email === adminEmail) {
-        return true; // Allow admin to sign in
+        return true; 
       }
-      // Check if the user is a salesperson by querying the email field
       const q = query(
         collection(db, "users"),
         where("email", "==", user.email),
-        where("role", "==", "salesperson")
+        where("role", "==", "Salesperson")
       );
       const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty; // Allow sign-in if a salesperson document exists
+      return !querySnapshot.empty;
     },
     async session({ session }) {
       const { email } = session.user;
-      // Query the users collection by email
       const q = query(collection(db, "users"), where("email", "==", email));
       const querySnapshot = await getDocs(q);
 
@@ -62,18 +60,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const userData = querySnapshot.docs[0].data();
         session.user.role = userData.role || "unknown";
         if (email === "eromotoya@gmail.com") {
-          // For admin: use existing name or set to "Floridda" and update document
           session.user.name = userData.name || "Floridda";
           if (!userData.name) {
             await updateDoc(querySnapshot.docs[0].ref, { name: "Floridda" });
           }
         } else {
-          // For others: use name from document or "N/A"
           session.user.name = userData.name || "N/A";
         }
       } else if (email === "eromotoya@gmail.com") {
-        // If no document exists for admin, create one
-        session.user.role = "admin";
+        session.user.role = "Admin";
         session.user.name = "Floridda";
         await addDoc(collection(db, "users"), {
           email,
@@ -81,7 +76,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: "Floridda",
         });
       } else {
-        // For unknown users
         session.user.role = "unknown";
         session.user.name = "N/A";
       }

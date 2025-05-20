@@ -1,19 +1,13 @@
 "use client";
 import { useState } from "react";
 import { db } from "@/lib/firebaseConfig";
-import {
-  collection,
-  getDocs,
-  deleteDoc,
-  doc,
-  updateDoc,
-  addDoc,
-} from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import RegisterProduct from "@/components/RegisterProduct";
 import Table from "@/components/Table";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import { Edit, Trash } from "lucide-react";
+import { useSearch } from "@/context/SearchContext";
 
 export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
@@ -23,6 +17,7 @@ export default function ProductsPage() {
   const [hasFetched, setHasFetched] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const { searchTerm } = useSearch();
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -63,6 +58,10 @@ export default function ProductsPage() {
     setProductToEdit(product);
     setShowModal(true);
   };
+
+  const filteredProducts = products.filter((product) =>
+    product.item.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const columns = [
     { key: "item", label: "Item" },
@@ -112,8 +111,8 @@ export default function ProductsPage() {
       {loading ? (
         <p className="text-gray-900 dark:text-white">Loading products...</p>
       ) : hasFetched ? (
-        products.length > 0 ? (
-          <Table columns={columns} data={products} actions={actions} />
+        filteredProducts.length > 0 ? (
+          <Table columns={columns} data={filteredProducts} actions={actions} />
         ) : (
           <p className="text-gray-900 dark:text-white">No products found.</p>
         )

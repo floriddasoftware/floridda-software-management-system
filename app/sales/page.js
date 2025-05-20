@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebaseConfig";
 import {
   collection,
@@ -12,19 +12,18 @@ import { useSession } from "next-auth/react";
 import Table from "@/components/Table";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
-import FormField from "@/components/FormField";
+import { useSearch } from "@/context/SearchContext";
 
 export default function SalesPage() {
   const { data: session } = useSession();
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [sellQuantity, setSellQuantity] = useState("");
   const [showSellModal, setShowSellModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { searchTerm } = useSearch();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -35,7 +34,6 @@ export default function SalesPage() {
           ...doc.data(),
         }));
         setProducts(productsData);
-        setFilteredProducts(productsData);
         setLoading(false);
       },
       (err) => {
@@ -48,12 +46,10 @@ export default function SalesPage() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const filtered = products.filter((product) =>
-      product.item.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProducts(filtered);
-  }, [searchTerm, products]);
+  // Filter products based on global search term
+  const filteredProducts = products.filter((product) =>
+    product.item.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleSell = (product) => {
     setSelectedProduct(product);
@@ -123,15 +119,6 @@ export default function SalesPage() {
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Sales
       </h1>
-      <div className="mb-4">
-        <FormField
-          label="Search Products"
-          name="search"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by item name"
-        />
-      </div>
       {error && <p className="text-red-500 mb-4">{error}</p>}
       {loading ? (
         <p className="text-gray-900 dark:text-white">Loading products...</p>

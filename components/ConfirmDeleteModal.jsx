@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 
 export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm }) {
   if (!isOpen) return null;
