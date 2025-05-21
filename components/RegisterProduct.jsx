@@ -16,7 +16,8 @@ export default function RegisterProduct({
   const [formData, setFormData] = useState({
     item: "",
     quantity: "",
-    amountPerUnit: "",
+    costPrice: "",
+    salePrice: "",
     modelNumber: "",
     serialNumber: "",
     color: "",
@@ -35,7 +36,8 @@ export default function RegisterProduct({
       setFormData({
         item: productToEdit.item || "",
         quantity: productToEdit.quantity || "",
-        amountPerUnit: productToEdit.amountPerUnit || "",
+        costPrice: productToEdit.costPrice || "",
+        salePrice: productToEdit.salePrice || "",
         modelNumber: productToEdit.modelNumber || "",
         serialNumber: productToEdit.serialNumber || "",
         color: productToEdit.color || "",
@@ -48,7 +50,8 @@ export default function RegisterProduct({
       setFormData({
         item: "",
         quantity: "",
-        amountPerUnit: "",
+        costPrice: "",
+        salePrice: "",
         modelNumber: "",
         serialNumber: "",
         color: "",
@@ -68,7 +71,8 @@ export default function RegisterProduct({
     if (
       !formData.item ||
       !formData.quantity ||
-      !formData.amountPerUnit ||
+      !formData.costPrice ||
+      !formData.salePrice ||
       !formData.modelNumber ||
       !formData.serialNumber ||
       !formData.category ||
@@ -136,14 +140,25 @@ export default function RegisterProduct({
             disabled={loading}
           />
           <FormField
-            label="Amount per Unit"
-            name="amountPerUnit"
+            label="Cost Price per Unit"
+            name="costPrice"
             type="number"
-            value={formData.amountPerUnit}
+            value={formData.costPrice}
             onChange={handleChange}
             required
             disabled={loading}
           />
+          <FormField
+            label="Sale Price per Unit"
+            name="salePrice"
+            type="number"
+            value={formData.salePrice}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+        </div>
+        <div className="space-y-4">
           <FormField
             label="Model Number"
             name="modelNumber"
@@ -152,8 +167,6 @@ export default function RegisterProduct({
             required
             disabled={loading}
           />
-        </div>
-        <div className="space-y-4">
           <FormField
             label="Serial Number"
             name="serialNumber"
@@ -185,8 +198,6 @@ export default function RegisterProduct({
             onChange={handleChange}
             disabled={loading}
           />
-        </div>
-        <div className="md:col-span-2 space-y-4">
           <FormField
             label="Storage"
             name="storage"
@@ -194,6 +205,8 @@ export default function RegisterProduct({
             onChange={handleChange}
             disabled={loading}
           />
+        </div>
+        <div className="md:col-span-2 space-y-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Description
             <textarea

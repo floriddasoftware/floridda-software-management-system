@@ -7,6 +7,7 @@ import {
   updateDoc,
   doc,
   addDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import Table from "@/components/Table";
@@ -46,7 +47,6 @@ export default function SalesPage() {
     return () => unsubscribe();
   }, []);
 
-  // Filter products based on global search term
   const filteredProducts = products.filter((product) =>
     product.item.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -67,18 +67,36 @@ export default function SalesPage() {
 
     try {
       const newQuantity = selectedProduct.quantity - quantityToSell;
-      await updateDoc(doc(db, "products", selectedProduct.id), {
-        quantity: newQuantity,
-      });
+      if (newQuantity > 0) {
+        await updateDoc(doc(db, "products", selectedProduct.id), {
+          quantity: newQuantity,
+        });
+      } else {
+        await deleteDoc(doc(db, "products", selectedProduct.id));
+        if (session?.user?.email) {
+          await addDoc(collection(db, "notifications"), {
+            userId: session.user.email,
+            message: `${selectedProduct.item} has been sold out and removed from inventory.`,
+            read: false,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      // Record the sale
       await addDoc(collection(db, "sales"), {
         productId: selectedProduct.id,
         item: selectedProduct.item,
         quantity: quantityToSell,
-        totalAmount: quantityToSell * selectedProduct.amountPerUnit,
+        salePrice: selectedProduct.salePrice,
+        costPrice: selectedProduct.costPrice,
+        totalAmount: quantityToSell * selectedProduct.salePrice,
         salespersonId: session?.user?.email || "unknown",
         timestamp: new Date().toISOString(),
       });
-      if (newQuantity < 5 && session?.user?.email) {
+
+      // Low stock notification if applicable
+      if (newQuantity < 5 && newQuantity > 0 && session?.user?.email) {
         await addDoc(collection(db, "notifications"), {
           userId: session.user.email,
           message: `${selectedProduct.item} is low on stock (${newQuantity} left)`,
@@ -86,6 +104,7 @@ export default function SalesPage() {
           timestamp: new Date().toISOString(),
         });
       }
+
       setShowSellModal(false);
       setSelectedProduct(null);
     } catch (error) {
@@ -102,7 +121,7 @@ export default function SalesPage() {
   const columns = [
     { key: "item", label: "Item" },
     { key: "quantity", label: "Quantity" },
-    { key: "amountPerUnit", label: "Amount/Unit" },
+    { key: "salePrice", label: "Sale Price" },
     { key: "modelNumber", label: "Model" },
     { key: "serialNumber", label: "Serial" },
     { key: "category", label: "Category" },
@@ -163,8 +182,14 @@ export default function SalesPage() {
             <p>
               <strong>Quantity:</strong> {selectedProduct.quantity}
             </p>
+            {session?.user?.role === "admin" && (
+              <p>
+                <strong>Cost Price per Unit:</strong>{" "}
+                {selectedProduct.costPrice}
+              </p>
+            )}
             <p>
-              <strong>Amount/Unit:</strong> {selectedProduct.amountPerUnit}
+              <strong>Sale Price per Unit:</strong> {selectedProduct.salePrice}
             </p>
             <p>
               <strong>Model Number:</strong> {selectedProduct.modelNumber}

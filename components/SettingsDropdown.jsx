@@ -4,15 +4,13 @@ import { Sun, Moon, Bell, Settings, LogOut } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import UserInfo from "./UserInfo";
 import NotificationList from "./NotificationList";
+import { Tooltip } from "react-tooltip";
+import { signOut } from "next-auth/react";
 
 export default function SettingsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const { isDarkMode, toggleTheme } = useTheme();
-
-  const handleLogout = () => {
-    window.location.href = "/login";
-  };
 
   useEffect(() => {
     const closeDropdown = (e) => {
@@ -25,13 +23,21 @@ export default function SettingsDropdown() {
     return () => window.removeEventListener("click", closeDropdown);
   }, []);
 
+  const handleLogout = async () => {
+    await signOut({ redirect: false }); 
+    window.location.replace("/login"); 
+  };
+
   return (
     <div className="relative dropdown-container">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+        data-tooltip-id="settings-tooltip"
+        data-tooltip-content="Settings"
       >
         <Settings className="w-5 h-5" />
+        <Tooltip id="settings-tooltip" />
       </button>
 
       {isOpen && (

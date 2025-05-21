@@ -5,15 +5,15 @@ import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import SettingsDropdown from "./SettingsDropdown";
 import { useTheme } from "./ThemeContext";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { db } from "@/lib/firebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import UserInfo from "./UserInfo";
 import NotificationList from "./NotificationList";
 import SearchBar from "./SearchBar";
-import ReactTooltip from "react-tooltip";
+import { Tooltip } from "react-tooltip";
 
-export default function Navbar() {
+export default function Navbar({ className = "" }) {
   const { isDarkMode } = useTheme();
   const { data: session } = useSession();
   const [notifications, setNotifications] = useState([]);
@@ -41,12 +41,15 @@ export default function Navbar() {
     }
   }, [session]);
 
-  const handleLogout = () => {
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    await signOut({ redirect: false }); 
+    window.location.replace("/login"); 
   };
 
   return (
-    <nav className="flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow bg-white dark:bg-gray-900">
+    <nav
+      className={`flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow bg-white dark:bg-gray-900 ${className}`}
+    >
       <Link href="/dashboard" className="flex gap-2 sm:gap-3 md:gap-4">
         <div className="flex items-center gap-1 text-2xl font-bold text-blue-400 hover:text-blue-500 transition-colors">
           <PhoneCall className="w-4 h-4 lg:w-7 lg:h-7 md:w-6 md:h-6 sm:w-5 sm:h-5" />
@@ -63,7 +66,11 @@ export default function Navbar() {
       <div className="hidden items-center gap-8 lg:flex">
         <ThemeToggle />
 
-        <div className="relative" data-tip="Notifications">
+        <div
+          className="relative"
+          data-tooltip-id="notifications-tooltip"
+          data-tooltip-content="Notifications"
+        >
           <button
             onClick={() => {
               setShowNotifications(!showNotifications);
@@ -78,7 +85,7 @@ export default function Navbar() {
               </span>
             )}
           </button>
-          <ReactTooltip effect="solid" />
+          <Tooltip id="notifications-tooltip" />
           {showNotifications && (
             <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
               <NotificationList onClose={() => setShowNotifications(false)} />
@@ -86,7 +93,11 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="relative" data-tip="Profile">
+        <div
+          className="relative"
+          data-tooltip-id="profile-tooltip"
+          data-tooltip-content="Profile"
+        >
           <button
             onClick={() => {
               setShowProfileDropdown(!showProfileDropdown);
@@ -96,7 +107,7 @@ export default function Navbar() {
           >
             <User className="w-6 h-6" />
           </button>
-          <ReactTooltip effect="solid" />
+          <Tooltip id="profile-tooltip" />
           {showProfileDropdown && (
             <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
               <UserInfo />
@@ -107,10 +118,11 @@ export default function Navbar() {
         <button
           onClick={handleLogout}
           className="text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
-          data-tip="Logout"
+          data-tooltip-id="logout-tooltip"
+          data-tooltip-content="Logout"
         >
           <LogOut className="w-6 h-6" />
-          <ReactTooltip effect="solid" />
+          <Tooltip id="logout-tooltip" />
         </button>
       </div>
 

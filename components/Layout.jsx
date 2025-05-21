@@ -21,22 +21,19 @@ export default function Layout({ children }) {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
-      <Navbar />
-      
-      <div className="flex flex-1">
+    <div className="h-screen bg-white dark:bg-gray-900">
+      <Navbar className="fixed top-0 left-0 w-full z-50" />
+      <div className="flex flex-row h-[calc(100vh-64px)] pt-16">
         <Sidebar
           isCollapsed={isCollapsed}
           toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+          className="transition-all duration-300"
         />
-        
-        <main className={`
-          flex-1 
-          transition-all duration-300 
-          ${isCollapsed ? "ml-10" : "-ml-5"}
-          min-h-[calc(100vh-4rem)]
-          p-4
-        `}>
+        <main
+          className={`flex-1 h-full overflow-y-auto p-6 transition-all duration-300 ${
+            isCollapsed ? "ml-10" : "ml-40"
+          }`}
+        >
           {children}
         </main>
       </div>

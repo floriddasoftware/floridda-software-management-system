@@ -18,6 +18,20 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+main {
+  scrollbar-width: none; 
+  -ms-overflow-style: none; 
+}
+
+main::-webkit-scrollbar {
+  display: none; 
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -48,3 +62,5 @@ body {
   font-size: 12px;
   white-space: nowrap;
 }
+
+@import 'react-tooltip/dist/react-tooltip.css';

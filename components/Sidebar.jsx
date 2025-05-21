@@ -6,7 +6,11 @@ import { Home, Box, DollarSign, PlusSquare } from "lucide-react";
 import CollapseButton from "./CollapseButton";
 import Footer from "./Footer";
 
-export default function Sidebar({ isCollapsed, toggleCollapse }) {
+export default function Sidebar({
+  isCollapsed,
+  toggleCollapse,
+  className = "",
+}) {
   const { data: session } = useSession();
   const path = usePathname() || "";
 
@@ -25,15 +29,11 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
 
   return (
     <aside
-      className={`
-        fixed lg:relative
-        ${isCollapsed ? "w-12" : "w-40"}
-        h-[calc(100vh-4rem)] py-6 flex flex-col
-        bg-white dark:bg-gray-900
-        z-40
-      `}
+      className={`fixed top-16 left-0 h-[calc(100vh-64px)] z-40 flex flex-col bg-white dark:bg-gray-900 transition-all duration-300 ${
+        isCollapsed ? "w-10" : "w-40"
+      } ${className}`}
     >
-      <nav className="flex-1 px-2 overflow-y-auto">
+      <nav className="flex-1 px-2 py-4 overflow-y-auto">
         <ul className="space-y-2">
           <li>
             <CollapseButton
@@ -61,7 +61,7 @@ export default function Sidebar({ isCollapsed, toggleCollapse }) {
         </ul>
       </nav>
       {!isCollapsed && (
-        <div className="mt-auto px-2 border-t-2 border-gray-900 dark:border-white shrink-0 text-center">
+        <div className="px-2 py-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
           <Footer />
         </div>
       )}

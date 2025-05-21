@@ -66,7 +66,8 @@ export default function ProductsPage() {
   const columns = [
     { key: "item", label: "Item" },
     { key: "quantity", label: "Quantity" },
-    { key: "amountPerUnit", label: "Amount/Unit" },
+    { key: "costPrice", label: "Cost Price" }, 
+    { key: "salePrice", label: "Sale Price" },
     { key: "modelNumber", label: "Model" },
     { key: "serialNumber", label: "Serial" },
     { key: "category", label: "Category" },

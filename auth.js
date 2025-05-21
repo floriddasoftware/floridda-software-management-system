@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
+import Nodemailer from "next-auth/providers/nodemailer";
 import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { cert } from "firebase-admin/app";
-import Nodemailer from "next-auth/providers/nodemailer";
 import { db } from "@/lib/firebaseConfig";
 import {
   collection,
@@ -17,7 +17,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Nodemailer({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
-        port: process.env.EMAIL_SERVER_PORT,
+        port: Number(process.env.EMAIL_SERVER_PORT),
         auth: {
           user: process.env.EMAIL_SERVER_USER,
           pass: process.env.EMAIL_SERVER_PASSWORD,
@@ -41,12 +41,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user }) {
       const adminEmail = "eromotoya@gmail.com";
       if (user.email === adminEmail) {
-        return true; 
+        return true;
       }
       const q = query(
         collection(db, "users"),
         where("email", "==", user.email),
-        where("role", "==", "Salesperson")
+        where("role", "==", "salesperson") 
       );
       const querySnapshot = await getDocs(q);
       return !querySnapshot.empty;
@@ -68,7 +68,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           session.user.name = userData.name || "N/A";
         }
       } else if (email === "eromotoya@gmail.com") {
-        session.user.role = "Admin";
+        session.user.role = "admin";
         session.user.name = "Floridda";
         await addDoc(collection(db, "users"), {
           email,
@@ -81,5 +81,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      return baseUrl + "/dashboard";
+    },
   },
+  secret: process.env.NEXTAUTH_SECRET,
 });

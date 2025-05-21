@@ -10,13 +10,13 @@ export async function middleware(request) {
     "/add": ["admin"],
   };
 
-  const isProtected = Object.keys(protectedRoutes).some((route) =>
-    path.startsWith(route)
-  );
-
   if (path === "/unauthorized" || path === "/login") {
     return NextResponse.next();
   }
+
+  const isProtected = Object.keys(protectedRoutes).some((route) =>
+    path.startsWith(route)
+  );
 
   if (isProtected) {
     const authResponse = await fetch(
@@ -30,13 +30,13 @@ export async function middleware(request) {
     const authData = await authResponse.json();
 
     if (!authData.authenticated) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
-    const allowedRoles = protectedRoutes[
-      Object.keys(protectedRoutes).find((route) => path.startsWith(route))
-    ];
-
+    const allowedRoles =
+      protectedRoutes[
+        Object.keys(protectedRoutes).find((route) => path.startsWith(route))
+      ];
     if (!allowedRoles.includes(authData.role)) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
@@ -46,5 +46,10 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/products/:path*", "/sales/:path*", "/add/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/products/:path*",
+    "/sales/:path*",
+    "/add/:path*",
+  ],
 };
