@@ -39,7 +39,7 @@ export default function SalesPage() {
       },
       (err) => {
         console.error("Error listening to products:", err);
-        setError("Failed to load products");
+        setError("Failed to load products. Please try again later.");
         setLoading(false);
       }
     );
@@ -55,16 +55,21 @@ export default function SalesPage() {
     setSelectedProduct(product);
     setSellQuantity("");
     setShowSellModal(true);
+    setError(""); 
   };
 
   const confirmSell = async () => {
-    if (!selectedProduct || !sellQuantity || sellQuantity <= 0) return;
+    if (!selectedProduct || !sellQuantity || sellQuantity <= 0) {
+      setError("Please enter a valid quantity.");
+      return;
+    }
     const quantityToSell = parseInt(sellQuantity);
     if (quantityToSell > selectedProduct.quantity) {
-      alert("Cannot sell more than available quantity!");
+      setError("Cannot sell more than available quantity!");
       return;
     }
 
+    setLoading(true);
     try {
       const newQuantity = selectedProduct.quantity - quantityToSell;
       if (newQuantity > 0) {
@@ -83,7 +88,6 @@ export default function SalesPage() {
         }
       }
 
-      // Record the sale
       await addDoc(collection(db, "sales"), {
         productId: selectedProduct.id,
         item: selectedProduct.item,
@@ -95,7 +99,6 @@ export default function SalesPage() {
         timestamp: new Date().toISOString(),
       });
 
-      // Low stock notification if applicable
       if (newQuantity < 5 && newQuantity > 0 && session?.user?.email) {
         await addDoc(collection(db, "notifications"), {
           userId: session.user.email,
@@ -109,13 +112,16 @@ export default function SalesPage() {
       setSelectedProduct(null);
     } catch (error) {
       console.error("Error processing sale:", error);
-      setError("Failed to process sale");
+      setError("Failed to process sale. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleView = (product) => {
     setSelectedProduct(product);
     setShowViewModal(true);
+    setError(""); 
   };
 
   const columns = [
@@ -138,7 +144,9 @@ export default function SalesPage() {
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Sales
       </h1>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {error && (
+        <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
+      )}
       {loading ? (
         <p className="text-gray-900 dark:text-white">Loading products...</p>
       ) : filteredProducts.length > 0 ? (
@@ -162,10 +170,18 @@ export default function SalesPage() {
           className="mb-4 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           min="1"
           max={selectedProduct?.quantity}
+          disabled={loading}
         />
+        {error && (
+          <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
+        )}
         <div className="flex justify-end space-x-2">
-          <Button onClick={() => setShowSellModal(false)}>Cancel</Button>
-          <Button onClick={confirmSell}>Sell</Button>
+          <Button onClick={() => setShowSellModal(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={confirmSell} disabled={loading}>
+            {loading ? "Processing..." : "Sell"}
+          </Button>
         </div>
       </Modal>
 

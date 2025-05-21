@@ -68,31 +68,68 @@ export default function RegisterProduct({
     setError("");
     setLoading(true);
 
+    // Convert form data to correct types
+    const quantity = parseInt(formData.quantity, 10);
+    const costPrice = parseFloat(formData.costPrice);
+    const salePrice = parseFloat(formData.salePrice);
+
+    // Validate the inputs
     if (
-      !formData.item ||
-      !formData.quantity ||
-      !formData.costPrice ||
-      !formData.salePrice ||
-      !formData.modelNumber ||
-      !formData.serialNumber ||
-      !formData.category ||
-      !formData.subCategory
+      !formData.item.trim() ||
+      isNaN(quantity) ||
+      isNaN(costPrice) ||
+      isNaN(salePrice) ||
+      !formData.modelNumber.trim() ||
+      !formData.serialNumber.trim() ||
+      !formData.category.trim() ||
+      !formData.subCategory.trim()
     ) {
-      setError("Please fill in all required fields");
+      setError("Please fill in all required fields with valid data.");
+      setLoading(false);
+      return;
+    }
+
+    if (quantity <= 0) {
+      setError("Quantity must be a positive number.");
+      setLoading(false);
+      return;
+    }
+    if (costPrice <= 0 || salePrice <= 0) {
+      setError("Prices must be positive numbers.");
+      setLoading(false);
+      return;
+    }
+    if (salePrice < costPrice) {
+      setError("Sale Price must be greater than or equal to Cost Price.");
       setLoading(false);
       return;
     }
 
     try {
+      const productData = {
+        item: formData.item,
+        quantity,
+        costPrice,
+        salePrice,
+        modelNumber: formData.modelNumber,
+        serialNumber: formData.serialNumber,
+        color: formData.color,
+        storage: formData.storage,
+        category: formData.category,
+        subCategory: formData.subCategory,
+        description: formData.description,
+      };
+
       if (isEditing) {
-        await updateDoc(doc(db, "products", productToEdit.id), formData);
+        await updateDoc(doc(db, "products", productToEdit.id), productData);
       } else {
-        await addDoc(collection(db, "products"), formData);
+        await addDoc(collection(db, "products"), productData);
       }
-      if (formData.quantity < 5 && session?.user?.email) {
+
+      if (quantity < 5 && session?.user?.email) {
         await addDoc(collection(db, "notifications"), {
           userId: session.user.email,
-          message: `${formData.item} is low on stock (${formData.quantity} left)`,
+          message: `${formData.item} is low on stock (${quantity} left)`,
           read: false,
           timestamp: new Date().toISOString(),
         });
@@ -101,7 +138,7 @@ export default function RegisterProduct({
       onClose();
     } catch (err) {
       console.error("Error saving product:", err);
-      setError("Failed to save product");
+      setError("Failed to save product. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -138,6 +175,7 @@ export default function RegisterProduct({
             onChange={handleChange}
             required
             disabled={loading}
+            min="1"
           />
           <FormField
             label="Cost Price per Unit"
@@ -147,6 +185,8 @@ export default function RegisterProduct({
             onChange={handleChange}
             required
             disabled={loading}
+            step="0.01"
+            min="0.01"
           />
           <FormField
             label="Sale Price per Unit"
@@ -156,6 +196,8 @@ export default function RegisterProduct({
             onChange={handleChange}
             required
             disabled={loading}
+            step="0.01"
+            min="0.01"
           />
         </div>
         <div className="space-y-4">
@@ -219,7 +261,11 @@ export default function RegisterProduct({
             />
           </label>
         </div>
-        {error && <p className="md:col-span-2 text-red-500 text-sm">{error}</p>}
+        {error && (
+          <p className="md:col-span-2 text-red-500 text-sm bg-red-100 p-2 rounded">
+            {error}
+          </p>
+        )}
         <div className="md:col-span-2 flex justify-end space-x-2 mt-4">
           <Button onClick={onClose} disabled={loading}>
             Cancel

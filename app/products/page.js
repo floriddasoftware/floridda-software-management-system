@@ -23,10 +23,23 @@ export default function ProductsPage() {
     setLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "products"));
-      const productsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const productsData = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          item: data.item || "",
+          quantity: typeof data.quantity === "number" ? data.quantity : 0,
+          costPrice: typeof data.costPrice === "number" ? data.costPrice : 0,
+          salePrice: typeof data.salePrice === "number" ? data.salePrice : 0,
+          modelNumber: data.modelNumber || "",
+          serialNumber: data.serialNumber || "",
+          category: data.category || "",
+          subCategory: data.subCategory || "",
+          color: data.color || "",
+          storage: data.storage || "",
+          description: data.description || "",
+        };
+      });
       setProducts(productsData);
       setHasFetched(true);
     } catch (error) {
@@ -66,7 +79,7 @@ export default function ProductsPage() {
   const columns = [
     { key: "item", label: "Item" },
     { key: "quantity", label: "Quantity" },
-    { key: "costPrice", label: "Cost Price" }, 
+    { key: "costPrice", label: "Cost Price" },
     { key: "salePrice", label: "Sale Price" },
     { key: "modelNumber", label: "Model" },
     { key: "serialNumber", label: "Serial" },

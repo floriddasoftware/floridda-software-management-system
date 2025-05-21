@@ -61,7 +61,7 @@ export default function Sidebar({
         </ul>
       </nav>
       {!isCollapsed && (
-        <div className="px-2 py-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
+        <div className="px-2 py-4 border-t border-gray-900 dark:border-white shrink-0">
           <Footer />
         </div>
       )}
