@@ -7,18 +7,21 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  query,
+  where,
 } from "firebase/firestore";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Table from "@/components/Table";
 import Modal from "@/components/Modal";
 import { Trash } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function AddPage() {
   const [salespersons, setSalespersons] = useState([]);
   const [formData, setFormData] = useState({ email: "", name: "", phone: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [salespersonToDelete, setSalespersonToDelete] = useState(null);
@@ -36,17 +39,28 @@ export default function AddPage() {
       setHasFetched(true);
     } catch (error) {
       console.error("Error fetching salespersons:", error);
-      setError("Failed to load salespeople");
+      toast.error("Failed to load salespeople");
     } finally {
       setLoading(false);
     }
   };
 
+  const checkEmailExists = async (email) => {
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     try {
+      const emailExists = await checkEmailExists(formData.email);
+      if (emailExists) {
+        toast.error("Email already exists.");
+        setLoading(false);
+        return;
+      }
       await addDoc(collection(db, "users"), {
         ...formData,
         role: "salesperson",
@@ -55,7 +69,7 @@ export default function AddPage() {
       setShowAddModal(false);
       fetchSalespersons();
     } catch (error) {
-      setError("Failed to add salesperson.");
+      toast.error("Failed to add salesperson.");
       console.error("Error:", error);
     } finally {
       setLoading(false);
@@ -80,6 +94,7 @@ export default function AddPage() {
         );
       } catch (error) {
         console.error("Error deleting salesperson:", error);
+        toast.error("Failed to delete salesperson");
       }
       setShowConfirmDelete(false);
       setSalespersonToDelete(null);
@@ -101,6 +116,7 @@ export default function AddPage() {
 
   return (
     <div className="container mx-auto p-4">
+      <ToastContainer />
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Manage Salespeople
       </h1>
@@ -125,8 +141,6 @@ export default function AddPage() {
           Click "View" to see salespeople.
         </p>
       )}
-
-      {error && <p className="text-red-500 mb-4">{error}</p>}
 
       <Modal
         isOpen={showAddModal}

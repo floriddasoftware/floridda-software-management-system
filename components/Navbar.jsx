@@ -42,8 +42,8 @@ export default function Navbar({ className = "" }) {
   }, [session]);
 
   const handleLogout = async () => {
-    await signOut({ redirect: false }); 
-    window.location.replace("/login"); 
+    await signOut({ redirect: false });
+    window.location.replace("/login");
   };
 
   return (
@@ -51,7 +51,7 @@ export default function Navbar({ className = "" }) {
       className={`flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow bg-white dark:bg-gray-900 ${className}`}
     >
       <Link href="/dashboard" className="flex gap-2 sm:gap-3 md:gap-4">
-        <div className="flex items-center gap-1 text-2xl font-bold text-blue-400 hover:text-blue-500 transition-colors">
+        <div className="flex items-center gap-1 text-2xl font-bold text-blue-400 hover:text-blue-500 transition-colors logo-container">
           <PhoneCall className="w-4 h-4 lg:w-7 lg:h-7 md:w-6 md:h-6 sm:w-5 sm:h-5" />
           <h6 className="lg:text-3xl md:text-2xl sm:text-xl text-base">
             Floridda
@@ -76,7 +76,7 @@ export default function Navbar({ className = "" }) {
               setShowNotifications(!showNotifications);
               setShowProfileDropdown(false);
             }}
-            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full relative"
+            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full relative transition-transform duration-200 transform hover:scale-110"
           >
             <Bell className="w-6 h-6" />
             {notifications.length > 0 && (
@@ -103,7 +103,7 @@ export default function Navbar({ className = "" }) {
               setShowProfileDropdown(!showProfileDropdown);
               setShowNotifications(false);
             }}
-            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
+            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full transition-transform duration-200 transform hover:scale-110"
           >
             <User className="w-6 h-6" />
           </button>
@@ -117,7 +117,7 @@ export default function Navbar({ className = "" }) {
 
         <button
           onClick={handleLogout}
-          className="text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
+          className="text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full transition-transform duration-200 transform hover:scale-110"
           data-tooltip-id="logout-tooltip"
           data-tooltip-content="Logout"
         >

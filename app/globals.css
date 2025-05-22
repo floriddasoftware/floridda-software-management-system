@@ -18,18 +18,19 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
 
 main {
-  scrollbar-width: none; 
-  -ms-overflow-style: none; 
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 main::-webkit-scrollbar {
-  display: none; 
+  display: none;
 }
 
 @keyframes fadeIn {
@@ -42,7 +43,23 @@ main::-webkit-scrollbar {
 }
 
 .fade-in {
-  animation: fadeIn 0.5s ease-in;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.logo-container {
+  animation: pulse 2s infinite;
 }
 
 .tooltip {
@@ -63,4 +80,4 @@ main::-webkit-scrollbar {
   white-space: nowrap;
 }
 
-@import 'react-tooltip/dist/react-tooltip.css';
+@import "react-tooltip/dist/react-tooltip.css";

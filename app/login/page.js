@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { Smartphone, Moon, Sun } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
