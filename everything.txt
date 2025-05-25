@@ -1,0 +1,2769 @@
+.env.local:
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="sofware-database"
+NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyBVIZfwrq9Gi6PRFpF95ffF04Tc4EmJ5Hk"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="sofware-database.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="sofware-database.firebasestorage.app"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="745186780986"
+NEXT_PUBLIC_FIREBASE_APP_ID="1:745186780986:web:e9f70b18d3d0bee4d79203"
+
+AUTH_FIREBASE_CLIENT_EMAIL="firebase-adminsdk-fbsvc@sofware-database.iam.gserviceaccount.com"
+AUTH_FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDLA/YzCebzvzlP\nhnWqUyHVlOaV2oSl4eJ4hAeRLzEy0RpX8vEoK5hkTTXg8nSkWRxG2O2W2iCPRiT7\n144Z3WYt886H2xCfref0OoCM1G8RUubrntarhuxyOhtICxjMV8C2BZ5Gq7b1RnZL\nMAWZADvxSjmNzUNACzbWGgiJAV0NQ+uARBJk8PCRdQsJhj+b273JcshU3fBzk/cL\nKaDQfGNXsTELDDxn8FVNGacOOdgtHoeRoZjGnBIh6gxaUhmNqbEwaZmmogwdCzdw\n8dRiYqp6IIwfNKFpEDsudZPED7Q5sUPMqKTTA798GAjvxg2T2Zebz6Luxp6eCMQs\n3upinFwpAgMBAAECggEAAiuQRMhgPv6nILmgOSCDLZCLpzJMF4NAKDCQH0/Xg8fl\nz6cCR6KqADDRYZW5B7rHvboVjqhx6FotCR39CN8Nd8CXS91Y8qGWCz+hkhNhNxFm\n0Mj0mdDiH9Bp5QzbNNNxQz/4NVliNDrgjgos+V122FotVz3WxZnBFpMgwF5J0kKH\n5vmvBXW3/LUH71YPeIbVX+xOJyaTIuloluSg/Y0bSerd383oYBEJUOYGBHCW97X1\nfLYoX0XxNMR1b3aBnNOizCpWlm8Phu8If/bWXsNuCJLsAsCuXMBFrkrCEi3Y/nk8\nInMm2jT2WbG8zh4KpInJaq32DkvHMZP2Wb1ne88YgQKBgQD183YGK1vFBw12/+/f\n01XgjNOvSjARrRmlVL9+t2M159TUXN3VR6EFE8uTUK5GLUYrs+n1blCzxLWjJa4T\noYSqhy2Mq2HsdX+ls+ptYw6CS8yVph3ejiGz8ELm9duTOHwx6kf1RQPQgB8Ur56i\nld3zvKjVNysluYFijQXwseJGgQKBgQDTT2nzOP4W6qZbl/HEu8JXWtBzvK+fc5FL\nWs7ZIGBVwDyAkiTls60ccyPfKgo9zuLEUr1tw/enshlPq5hZDhAfFF+7zNBPZ4On\n6HDpOgVTk/ShCeWBK8BdC1YAxyX4wzSs0dBl5MM8+A1/tdGFXUVapfkQ2Y4rMp7N\n5tku121RqQKBgQCDfhxVhAzWM8URIBhA1B4PpXrvNnyolqElcT/IIYebJEz3FIdN\nJbSCoGiwY+wofMANUWz92HKxCbQKe3Sr7iidexPxJxd9cfxCvQPSY6k4JApG378M\nY3TFXOiHzl4MQaC0lwrNqI43hKgZSSNIzVMSooSpKYuZ6amw5LCOVKwjAQKBgDvi\nfKdGVpQOCflZNVZI08nH3d1+8tKggOO3J3nXOBX1NfBF+pjyc7PlWZwsINzlXdS/\nkhmiePQYgB3ZBoLuflkggAUMBVkLf/8824rtO4c1HhXpZRZXXNvBk60Cw1sdjzcO\n+x11WHNV5RV1ZJyEE1yePtisnyLU5LZ7nr8spDmJAoGAebCs0ZWAAz/6sXwuZ2RB\nWc4DtWsqwXrF3BaWkFI44pTEGk6+yKLf0NkNgFtzZ4wlNB3W/bY6nMV4DnDtQ05h\nRiARBsN3X4A0a3WkoyuI3GhjfZVYJvlmovSKmRmtnEhCiUC4InN3xrGxLHKLNCF2\nQuyOtnnoY+Lgg5TXtiLhxGA=\n-----END PRIVATE KEY-----\n"
+AUTH_SECRET="/wdrKYukQKKQCS4l7Uy+KgLmMWUnMbQ2qF9cKr8dTjY=" 
+
+EMAIL_SERVER_USER=eromotoya@gmail.com
+EMAIL_SERVER_PASSWORD=tsatktjpobeeufvq
+EMAIL_SERVER_HOST=smtp.gmail.com
+EMAIL_SERVER_PORT=465
+EMAIL_FROM=eromotoya@gmail.com
+
+auth.js:
+import NextAuth from "next-auth";
+import Nodemailer from "next-auth/providers/nodemailer";
+import { FirestoreAdapter } from "@auth/firebase-adapter";
+import { cert } from "firebase-admin/app";
+import { db } from "@/lib/firebaseConfig";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  addDoc,
+} from "firebase/firestore";
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers: [
+    Nodemailer({
+      server: {
+        host: process.env.EMAIL_SERVER_HOST,
+        port: Number(process.env.EMAIL_SERVER_PORT),
+        auth: {
+          user: process.env.EMAIL_SERVER_USER,
+          pass: process.env.EMAIL_SERVER_PASSWORD,
+        },
+        secure: true,
+      },
+      from: process.env.EMAIL_FROM,
+    }),
+  ],
+  adapter: FirestoreAdapter({
+    credential: cert({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.AUTH_FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.AUTH_FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    }),
+  }),
+  pages: {
+    signIn: "/login",
+  },
+  callbacks: {
+    async signIn({ user }) {
+      const adminEmail = "eromotoya@gmail.com";
+      if (user.email === adminEmail) {
+        return true;
+      }
+      const q = query(
+        collection(db, "users"),
+        where("email", "==", user.email),
+        where("role", "==", "salesperson") 
+      );
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    },
+    async session({ session }) {
+      const { email } = session.user;
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        session.user.role = userData.role || "unknown";
+        if (email === "eromotoya@gmail.com") {
+          session.user.name = userData.name || "Floridda";
+          if (!userData.name) {
+            await updateDoc(querySnapshot.docs[0].ref, { name: "Floridda" });
+          }
+        } else {
+          session.user.name = userData.name || "N/A";
+        }
+      } else if (email === "eromotoya@gmail.com") {
+        session.user.role = "admin";
+        session.user.name = "Floridda";
+        await addDoc(collection(db, "users"), {
+          email,
+          role: "admin",
+          name: "Floridda",
+        });
+      } else {
+        session.user.role = "unknown";
+        session.user.name = "N/A";
+      }
+      return session;
+    },
+    async redirect({ url, baseUrl }) {
+      return baseUrl + "/dashboard";
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+});
+
+middleware.js:
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+
+export async function middleware(request) {
+  const path = request.nextUrl.pathname;
+
+  const protectedRoutes = {
+    "/dashboard": ["admin", "salesperson"],
+    "/products": ["admin"],
+    "/sales": ["admin", "salesperson"],
+    "/add": ["admin"],
+  };
+
+  if (path === "/unauthorized" || path === "/login") {
+    return NextResponse.next();
+  }
+
+  const isProtected = Object.keys(protectedRoutes).some((route) =>
+    path.startsWith(route)
+  );
+
+  if (isProtected) {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.redirect(new URL("/unauthorized", request.url));
+    }
+    const role = session.user.role;
+    const allowedRoles =
+      protectedRoutes[
+        Object.keys(protectedRoutes).find((route) => path.startsWith(route))
+      ];
+    if (!allowedRoles.includes(role)) {
+      return NextResponse.redirect(new URL("/unauthorized", request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/dashboard/:path*",
+    "/products/:path*",
+    "/sales/:path*",
+    "/add/:path*",
+  ],
+};
+
+next.config.mjs:
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  webpack: (config, { isServer, webpack }) => {
+    if (!isServer) {
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+          resource.request = resource.request.replace(/^node:/, "");
+        })
+      );
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        process: path.resolve(__dirname, "node_modules/process/browser.js"),
+      };
+    }
+    return config;
+  },
+};
+
+export default nextConfig;
+
+package.json:
+{
+  "name": "final",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@auth/firebase-adapter": "^2.9.1",
+    "firebase": "^11.7.3",
+    "firebase-admin": "^12.7.0",
+    "framer-motion": "^12.12.1",
+    "lucide-react": "^0.511.0",
+    "next": "15.3.2",
+    "next-auth": "^5.0.0-beta.28",
+    "nodemailer": "^6.10.1",
+    "process": "^0.11.10",
+    "react": "^19.0.0",
+    "react-datepicker": "^8.3.0",
+    "react-dom": "^19.0.0",
+    "react-toastify": "^11.0.5",
+    "react-tooltip": "^5.28.1",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.1"
+  }
+}
+
+app/add/layout.js:
+import Layout from "@/components/Layout";
+
+export default function AddLayout({ children }) {
+  return <Layout>{children}</Layout>;
+}
+
+app/add/page.js:
+"use client";
+import { useState } from "react";
+import { db } from "@/lib/firebaseConfig";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  where,
+} from "firebase/firestore";
+import FormField from "@/components/FormField";
+import Button from "@/components/Button";
+import Table from "@/components/Table";
+import Modal from "@/components/Modal";
+import { Trash } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+export default function AddPage() {
+  const [salespersons, setSalespersons] = useState([]);
+  const [formData, setFormData] = useState({ email: "", name: "", phone: "" });
+  const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [salespersonToDelete, setSalespersonToDelete] = useState(null);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  const fetchSalespersons = async () => {
+    setLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setSalespersons(data.filter((user) => user.role === "salesperson"));
+      setHasFetched(true);
+    } catch (error) {
+      console.error("Error fetching salespersons:", error);
+      toast.error("Failed to load salespeople");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkEmailExists = async (email) => {
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const emailExists = await checkEmailExists(formData.email);
+      if (emailExists) {
+        toast.error("Email already exists.");
+        setLoading(false);
+        return;
+      }
+      await addDoc(collection(db, "users"), {
+        ...formData,
+        role: "salesperson",
+      });
+      setFormData({ email: "", name: "", phone: "" });
+      setShowAddModal(false);
+      fetchSalespersons();
+    } catch (error) {
+      toast.error("Failed to add salesperson.");
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleDelete = (salesperson) => {
+    setSalespersonToDelete(salesperson);
+    setShowConfirmDelete(true);
+  };
+
+  const confirmDelete = async () => {
+    if (salespersonToDelete) {
+      try {
+        await deleteDoc(doc(db, "users", salespersonToDelete.id));
+        setSalespersons(
+          salespersons.filter((s) => s.id !== salespersonToDelete.id)
+        );
+      } catch (error) {
+        console.error("Error deleting salesperson:", error);
+        toast.error("Failed to delete salesperson");
+      }
+      setShowConfirmDelete(false);
+      setSalespersonToDelete(null);
+    }
+  };
+
+  const columns = [
+    { key: "name", label: "Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+  ];
+
+  const actions = [
+    {
+      onClick: handleDelete,
+      icon: <Trash className="w-5 h-5 text-red-600" />,
+    },
+  ];
+
+  return (
+    <div className="container mx-auto p-4">
+      <ToastContainer />
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+        Manage Salespeople
+      </h1>
+
+      <div className="flex justify-between mb-8">
+        <Button onClick={fetchSalespersons} disabled={loading}>
+          {loading ? "Loading..." : "View"}
+        </Button>
+        <Button onClick={() => setShowAddModal(true)}>Add</Button>
+      </div>
+
+      {hasFetched ? (
+        salespersons.length > 0 ? (
+          <Table columns={columns} data={salespersons} actions={actions} />
+        ) : (
+          <p className="text-gray-900 dark:text-white">
+            No salespeople added yet.
+          </p>
+        )
+      ) : (
+        <p className="text-gray-900 dark:text-white">
+          Click "View" to see salespeople.
+        </p>
+      )}
+
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add Salesperson"
+      >
+        <form onSubmit={handleAddSubmit} className="space-y-4">
+          <FormField
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+          <FormField
+            label="Name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+          <FormField
+            label="Phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+          />
+          <div className="flex justify-end space-x-2">
+            <Button onClick={() => setShowAddModal(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Adding..." : "Add Salesperson"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showConfirmDelete}
+        onClose={() => setShowConfirmDelete(false)}
+        title="Confirm Removal"
+      >
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Are you sure you want to remove this salesperson?
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
+          <Button
+            onClick={confirmDelete}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Remove
+          </Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+app/api/auth/[...nexauth]/route.js:
+import { handlers } from "@/auth";
+export const { GET, POST } = handlers
+
+app/dashboard/layout.js:
+import Layout from "@/components/Layout";
+
+export default function DashboardLayout({ children }) {
+  return <Layout>{children}</Layout>;
+}
+
+app/dashboard/page.js:
+"use client";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { db } from "@/lib/firebaseConfig";
+import { collection, getDocs } from "firebase/firestore";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { useTheme } from "@/components/ThemeContext";
+
+export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { isDarkMode } = useTheme();
+  const [sales, setSales] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [viewType, setViewType] = useState("day");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Fetch sales and products data from Firebase
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const salesSnapshot = await getDocs(collection(db, "sales"));
+        const salesData = salesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setSales(salesData);
+
+        const productsSnapshot = await getDocs(collection(db, "products"));
+        const productsData = productsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (status === "authenticated") {
+      fetchData();
+    }
+  }, [status]);
+
+  // Show loading message while session or data is loading
+  if (status === "loading" || loading) {
+    return (
+      <p className="text-gray-900 dark:text-white p-4">Loading dashboard...</p>
+    );
+  }
+
+  // If not authenticated, return nothing (redirect happens in useEffect)
+  if (status === "unauthenticated") {
+    return null;
+  }
+
+  // Colors for charts based on dark mode
+  const chartColors = {
+    text: isDarkMode ? "#fff" : "#000",
+    grid: isDarkMode ? "#4a5568" : "#cbd5e0",
+    bar: isDarkMode ? "#4299e1" : "#2b6cb0",
+  };
+
+  // Filter sales by date and view type (day, month, year)
+  const filterSales = (sales, viewType, selectedDate) => {
+    const selected = new Date(selectedDate);
+    return sales.filter((sale) => {
+      const saleDate = new Date(sale.timestamp);
+      if (viewType === "day") {
+        return (
+          saleDate.getFullYear() === selected.getFullYear() &&
+          saleDate.getMonth() === selected.getMonth() &&
+          saleDate.getDate() === selected.getDate()
+        );
+      } else if (viewType === "month") {
+        return (
+          saleDate.getFullYear() === selected.getFullYear() &&
+          saleDate.getMonth() === selected.getMonth()
+        );
+      } else if (viewType === "year") {
+        return saleDate.getFullYear() === selected.getFullYear();
+      }
+      return false;
+    });
+  };
+
+  // Group sales data for bar chart
+  const groupSales = (sales, viewType, includeProfit = false) => {
+    const grouped = {};
+    sales.forEach((sale) => {
+      const saleDate = new Date(sale.timestamp);
+      let key;
+      if (viewType === "day") {
+        key = saleDate.getHours().toString().padStart(2, "0") + ":00";
+      } else if (viewType === "month") {
+        key = saleDate.getDate().toString().padStart(2, "0");
+      } else if (viewType === "year") {
+        key = saleDate.toLocaleString("default", { month: "short" });
+      }
+      if (!grouped[key]) {
+        grouped[key] = { revenue: 0, profit: 0 };
+      }
+      grouped[key].revenue += Number(sale.totalAmount);
+      if (includeProfit) {
+        const cost = Number(sale.quantity) * Number(sale.costPrice);
+        grouped[key].profit += Number(sale.totalAmount) - cost;
+      }
+    });
+    const chartData = Object.entries(grouped).map(([key, data]) => ({
+      time: key,
+      revenue: data.revenue,
+      ...(includeProfit && { profit: data.profit }),
+    }));
+    if (viewType === "day" || viewType === "month") {
+      return chartData.sort((a, b) => parseInt(a.time) - parseInt(b.time));
+    } else if (viewType === "year") {
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      return chartData.sort(
+        (a, b) => months.indexOf(a.time) - months.indexOf(b.time)
+      );
+    }
+    return chartData;
+  };
+
+  // Get sales by category for pie chart (admins only)
+  const getSalesByCategory = (sales, products) => {
+    const categoryMap = products.reduce((map, product) => {
+      map[product.id] = product.category;
+      return map;
+    }, {});
+    const salesByCategory = sales.reduce((acc, sale) => {
+      const category = categoryMap[sale.productId] || "Unknown";
+      acc[category] = (acc[category] || 0) + Number(sale.totalAmount);
+      return acc;
+    }, {});
+    return Object.entries(salesByCategory).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  };
+
+  // Filter sales by user role (salespeople see only their sales)
+  const userSales =
+    session.user.role !== "admin"
+      ? sales.filter((sale) => sale.salespersonId === session.user.email)
+      : sales;
+  const filteredSales = filterSales(userSales, viewType, selectedDate);
+  const chartData = groupSales(
+    filteredSales,
+    viewType,
+    session.user.role === "admin"
+  );
+  const salesByCategory =
+    session.user.role === "admin"
+      ? getSalesByCategory(filteredSales, products)
+      : [];
+
+  // Calculate totals
+  const totalRevenue = filteredSales.reduce(
+    (sum, sale) => sum + Number(sale.totalAmount),
+    0
+  );
+  const totalProfit =
+    session.user.role === "admin"
+      ? filteredSales.reduce(
+          (sum, sale) =>
+            sum +
+            (Number(sale.totalAmount) -
+              Number(sale.quantity) * Number(sale.costPrice)),
+          0
+        )
+      : 0;
+
+  // Colors for pie chart
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+        Dashboard Overview
+      </h1>
+
+      <div className="mb-4 flex items-center">
+        <label className="mr-2 text-gray-900 dark:text-white md:text-lg text-xs">
+          View Type:
+        </label>
+        <select
+          value={viewType}
+          onChange={(e) => setViewType(e.target.value)}
+          className="md:mr-4 mr-2 md:p-2 md:w-24 w-12 border rounded bg-white dark:bg-gray-700 dark:text-white md:text-lg text-xs"
+        >
+          <option value="day">Day</option>
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
+        <DatePicker
+          selected={selectedDate}
+          onChange={(date) => setSelectedDate(date)}
+          dateFormat={
+            viewType === "day"
+              ? "yyyy/MM/dd"
+              : viewType === "month"
+              ? "yyyy/MM"
+              : "yyyy"
+          }
+          showMonthYearPicker={viewType === "month"}
+          showYearPicker={viewType === "year"}
+          className="md:p-2 p-0.5 border rounded md:w-32 w-24 bg-white dark:bg-gray-700 dark:text-white md:text-lg text-xs"
+        />
+      </div>
+
+      <p className="mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+        Showing data for{" "}
+        {viewType === "day"
+          ? selectedDate.toLocaleDateString()
+          : viewType === "month"
+          ? selectedDate.toLocaleString("default", {
+              month: "long",
+              year: "numeric",
+            })
+          : selectedDate.getFullYear()}
+      </p>
+
+      {/* Admin Charts */}
+      {session.user.role === "admin" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+              {viewType === "day"
+                ? "Hourly"
+                : viewType === "month"
+                ? "Daily"
+                : "Monthly"}{" "}
+              Sales and Profit
+            </h2>
+            {chartData.length > 0 ? (
+              <div className="w-full md:h-[400px] h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={chartColors.grid}
+                    />
+                    <XAxis dataKey="time" tick={{ fill: chartColors.text }} />
+                    <YAxis tick={{ fill: chartColors.text }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar
+                      dataKey="revenue"
+                      fill={chartColors.bar}
+                      name="Revenue"
+                    />
+                    <Bar dataKey="profit" fill="#82ca9d" name="Profit" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-gray-900 dark:text-white">
+                No sales data for this period.
+              </p>
+            )}
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+              Sales by Category
+            </h2>
+            {salesByCategory.length > 0 ? (
+              <div className="w-full md:h-[400px] h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={salesByCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      label
+                    >
+                      {salesByCategory.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-gray-900 dark:text-white">
+                No sales data for this period.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Salesperson Chart */}
+      {session.user.role !== "admin" && (
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+              Your{" "}
+              {viewType === "day"
+                ? "Hourly"
+                : viewType === "month"
+                ? "Daily"
+                : "Monthly"}{" "}
+              Sales
+            </h2>
+            {chartData.length > 0 ? (
+              <div className="w-full md:h-[400px] h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={chartColors.grid}
+                    />
+                    <XAxis dataKey="time" tick={{ fill: chartColors.text }} />
+                    <YAxis tick={{ fill: chartColors.text }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar
+                      dataKey="revenue"
+                      fill={chartColors.bar}
+                      name="Revenue"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-gray-900 dark:text-white">
+                No sales data for this period.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-lg">
+          <h3 className="text-gray-900 dark:text-white">Total Products</h3>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {products.length}
+          </p>
+        </div>
+        <div className="bg-green-100 dark:bg-green-900 p-4 rounded-lg">
+          <h3 className="text-gray-900 dark:text-white">
+            {session.user.role === "admin"
+              ? "Total Sales Transactions"
+              : "Your Sales Transactions"}
+          </h3>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {filteredSales.length}
+          </p>
+        </div>
+        {session.user.role === "admin" && (
+          <>
+            <div className="bg-purple-100 dark:bg-purple-900 p-4 rounded-lg">
+              <h3 className="text-gray-900 dark:text-white">Total Revenue</h3>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                ₦{totalRevenue.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-yellow-100 dark:bg-yellow-900 p-4 rounded-lg">
+              <h3 className="text-gray-900 dark:text-white">Total Profit</h3>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                ₦{totalProfit.toFixed(2)}
+              </p>
+            </div>
+          </>
+        )}
+        {session.user.role !== "admin" && (
+          <div className="bg-purple-100 dark:bg-purple-900 p-4 rounded-lg">
+            <h3 className="text-gray-900 dark:text-white">
+              Your Total Revenue
+            </h3>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              ₦{totalRevenue.toFixed(2)}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+app/login/page.js:
+"use client";
+import Image from "next/image";
+import { Smartphone } from "lucide-react";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import ThemeToggle from "@/components/ThemeToggle";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
+    const res = await signIn("nodemailer", {
+      email: email,
+      redirect: false,
+      callbackUrl: "/dashboard",
+    });
+    setLoading(false);
+    if (res?.error) {
+      setError("Failed to send login email.");
+    } else {
+      setMessage("Check your email!");
+      setEmail("");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 shadow-lg">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-400 rounded-xl overflow-hidden flex flex-col md:flex-row w-full max-w-6xl shadow-2xl">
+        <div className="hidden md:block relative md:w-1/2">
+          <Image
+            src="/Phones.jpg"
+            alt="Shopping illustration"
+            fill
+            className="object-cover"
+          />
+        </div>
+
+        <div className="p-8 w-full md:w-1/2">
+          <div className="flex flex-col items-center mb-8">
+            <Smartphone className="h-12 w-12 text-purple-600" />
+            <p className="mt-1 text-gray-600 dark:text-gray-100">
+              Welcome to{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                Floridda Software
+              </span>
+            </p>
+          </div>
+
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
+            Login To Dashboard
+          </h2>
+          <hr className="border-gray-300 mb-6" />
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Enter Address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter Email Address"
+                className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-950"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition cursor-pointer"
+              disabled={loading}
+            >
+              {loading ? "Sending..." : "Login"}
+            </button>
+
+            {error && (
+              <div className="bg-red-500 text-white w-fit text-sm py-1 px-3 rounded-md mt-2">
+                {error}
+              </div>
+            )}
+
+            {message && (
+              <div className="bg-green-500 text-white w-fit text-sm py-1 px-3 rounded-md mt-2">
+                {message}
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+app/products/layout.js:
+import Layout from "@/components/Layout";
+
+export default function ProductsLayout({ children }) {
+  return <Layout>{children}</Layout>;
+}
+
+app/products/page.js:
+"use client";
+import { useState } from "react";
+import { db } from "@/lib/firebaseConfig";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import RegisterProduct from "@/components/RegisterProduct";
+import Table from "@/components/Table";
+import Modal from "@/components/Modal";
+import Button from "@/components/Button";
+import { Edit, Trash } from "lucide-react";
+import { useSearch } from "@/context/SearchContext";
+
+export default function ProductsPage() {
+  const [showModal, setShowModal] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const { searchTerm } = useSearch();
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const productsData = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          item: data.item || "",
+          quantity: typeof data.quantity === "number" ? data.quantity : 0,
+          costPrice: typeof data.costPrice === "number" ? data.costPrice : 0,
+          salePrice: typeof data.salePrice === "number" ? data.salePrice : 0,
+          modelNumber: data.modelNumber || "",
+          serialNumber: data.serialNumber || "",
+          category: data.category || "",
+          subCategory: data.subCategory || "",
+          color: data.color || "",
+          storage: data.storage || "",
+          description: data.description || "",
+        };
+      });
+      setProducts(productsData);
+      setHasFetched(true);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = (product) => {
+    setProductToDelete(product);
+    setShowConfirmDelete(true);
+  };
+
+  const confirmDelete = async () => {
+    if (productToDelete) {
+      try {
+        await deleteDoc(doc(db, "products", productToDelete.id));
+        setProducts(products.filter((p) => p.id !== productToDelete.id));
+      } catch (error) {
+        console.error("Error deleting product:", error);
+      }
+      setShowConfirmDelete(false);
+      setProductToDelete(null);
+    }
+  };
+
+  const handleEdit = (product) => {
+    setProductToEdit(product);
+    setShowModal(true);
+  };
+
+  const filteredProducts = products.filter((product) =>
+    product.item.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const columns = [
+    { key: "item", label: "Item" },
+    { key: "quantity", label: "Quantity" },
+    { key: "costPrice", label: "Cost Price" },
+    { key: "salePrice", label: "Sale Price" },
+    { key: "modelNumber", label: "Model" },
+    { key: "serialNumber", label: "Serial" },
+    { key: "category", label: "Category" },
+    { key: "subCategory", label: "Sub Category" },
+  ];
+
+  const actions = [
+    {
+      onClick: handleEdit,
+      icon: <Edit className="w-5 h-5 text-blue-600" />,
+    },
+    {
+      onClick: handleDelete,
+      icon: <Trash className="w-5 h-5 text-red-600" />,
+    },
+  ];
+
+  return (
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between mb-8">
+        <Button onClick={fetchProducts} disabled={loading}>
+          {loading ? "Loading..." : "View"}
+        </Button>
+        <Button
+          onClick={() => {
+            setProductToEdit(null);
+            setShowModal(true);
+          }}
+        >
+          Register
+        </Button>
+      </div>
+
+      {showModal && (
+        <RegisterProduct
+          productToEdit={productToEdit}
+          onClose={() => setShowModal(false)}
+          onSaveComplete={fetchProducts}
+        />
+      )}
+
+      {loading ? (
+        <p className="text-gray-900 dark:text-white">Loading products...</p>
+      ) : hasFetched ? (
+        filteredProducts.length > 0 ? (
+          <Table columns={columns} data={filteredProducts} actions={actions} />
+        ) : (
+          <p className="text-gray-900 dark:text-white">No products found.</p>
+        )
+      ) : (
+        <p className="text-gray-900 dark:text-white">
+          Click "View" to see products.
+        </p>
+      )}
+
+      <Modal
+        isOpen={showConfirmDelete}
+        onClose={() => setShowConfirmDelete(false)}
+        title="Confirm Deletion"
+      >
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Are you sure you want to delete this product?
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
+          <Button
+            onClick={confirmDelete}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Delete
+          </Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+app/sales/layout.js:
+import Layout from "@/components/Layout";
+
+export default function SalesLayout({ children }) {
+  return <Layout>{children}</Layout>;
+}
+
+app/sales/page.js:
+"use client";
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebaseConfig";
+import {
+  collection,
+  onSnapshot,
+  updateDoc,
+  doc,
+  addDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { useSession } from "next-auth/react";
+import Table from "@/components/Table";
+import Modal from "@/components/Modal";
+import Button from "@/components/Button";
+import { useSearch } from "@/context/SearchContext";
+
+export default function SalesPage() {
+  const { data: session } = useSession();
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [sellQuantity, setSellQuantity] = useState("");
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { searchTerm } = useSearch();
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "products"),
+      (snapshot) => {
+        const productsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProducts(productsData);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Error listening to products:", err);
+        setError("Failed to load products. Please try again later.");
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const filteredProducts = products.filter((product) =>
+    product.item.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSell = (product) => {
+    setSelectedProduct(product);
+    setSellQuantity("");
+    setShowSellModal(true);
+    setError(""); 
+  };
+
+  const confirmSell = async () => {
+    if (!selectedProduct || !sellQuantity || sellQuantity <= 0) {
+      setError("Please enter a valid quantity.");
+      return;
+    }
+    const quantityToSell = parseInt(sellQuantity);
+    if (quantityToSell > selectedProduct.quantity) {
+      setError("Cannot sell more than available quantity!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const newQuantity = selectedProduct.quantity - quantityToSell;
+      if (newQuantity > 0) {
+        await updateDoc(doc(db, "products", selectedProduct.id), {
+          quantity: newQuantity,
+        });
+      } else {
+        await deleteDoc(doc(db, "products", selectedProduct.id));
+        if (session?.user?.email) {
+          await addDoc(collection(db, "notifications"), {
+            userId: session.user.email,
+            message: `${selectedProduct.item} has been sold out and removed from inventory.`,
+            read: false,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      await addDoc(collection(db, "sales"), {
+        productId: selectedProduct.id,
+        item: selectedProduct.item,
+        quantity: quantityToSell,
+        salePrice: selectedProduct.salePrice,
+        costPrice: selectedProduct.costPrice,
+        totalAmount: quantityToSell * selectedProduct.salePrice,
+        salespersonId: session?.user?.email || "unknown",
+        timestamp: new Date().toISOString(),
+      });
+
+      if (newQuantity < 5 && newQuantity > 0 && session?.user?.email) {
+        await addDoc(collection(db, "notifications"), {
+          userId: session.user.email,
+          message: `${selectedProduct.item} is low on stock (${newQuantity} left)`,
+          read: false,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      setShowSellModal(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error("Error processing sale:", error);
+      setError("Failed to process sale. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleView = (product) => {
+    setSelectedProduct(product);
+    setShowViewModal(true);
+    setError(""); 
+  };
+
+  const columns = [
+    { key: "item", label: "Item" },
+    { key: "quantity", label: "Quantity" },
+    { key: "salePrice", label: "Sale Price" },
+    { key: "modelNumber", label: "Model" },
+    { key: "serialNumber", label: "Serial" },
+    { key: "category", label: "Category" },
+    { key: "subCategory", label: "Sub Category" },
+  ];
+
+  const actions = [
+    { label: "Sell", onClick: handleSell },
+    { label: "View", onClick: handleView },
+  ];
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+        Sales
+      </h1>
+      {error && (
+        <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
+      )}
+      {loading ? (
+        <p className="text-gray-900 dark:text-white">Loading products...</p>
+      ) : filteredProducts.length > 0 ? (
+        <Table columns={columns} data={filteredProducts} actions={actions} />
+      ) : (
+        <p className="text-gray-900 dark:text-white">No products found.</p>
+      )}
+
+      <Modal
+        isOpen={showSellModal}
+        onClose={() => setShowSellModal(false)}
+        title="Sell Product"
+      >
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Enter quantity to sell for {selectedProduct?.item}:
+        </p>
+        <input
+          type="number"
+          value={sellQuantity}
+          onChange={(e) => setSellQuantity(e.target.value)}
+          className="mb-4 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          min="1"
+          max={selectedProduct?.quantity}
+          disabled={loading}
+        />
+        {error && (
+          <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
+        )}
+        <div className="flex justify-end space-x-2">
+          <Button onClick={() => setShowSellModal(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={confirmSell} disabled={loading}>
+            {loading ? "Processing..." : "Sell"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showViewModal}
+        onClose={() => setShowViewModal(false)}
+        title="Product Details"
+      >
+        {selectedProduct && (
+          <div className="text-gray-700 dark:text-gray-300">
+            <p>
+              <strong>Item:</strong> {selectedProduct.item}
+            </p>
+            <p>
+              <strong>Quantity:</strong> {selectedProduct.quantity}
+            </p>
+            {session?.user?.role === "admin" && (
+              <p>
+                <strong>Cost Price per Unit:</strong>{" "}
+                {selectedProduct.costPrice}
+              </p>
+            )}
+            <p>
+              <strong>Sale Price per Unit:</strong> {selectedProduct.salePrice}
+            </p>
+            <p>
+              <strong>Model Number:</strong> {selectedProduct.modelNumber}
+            </p>
+            <p>
+              <strong>Serial Number:</strong> {selectedProduct.serialNumber}
+            </p>
+            <p>
+              <strong>Category:</strong> {selectedProduct.category}
+            </p>
+            <p>
+              <strong>Sub Category:</strong> {selectedProduct.subCategory}
+            </p>
+            <p>
+              <strong>Color:</strong> {selectedProduct.color || "N/A"}
+            </p>
+            <p>
+              <strong>Storage:</strong> {selectedProduct.storage || "N/A"}
+            </p>
+            <p>
+              <strong>Description:</strong>{" "}
+              {selectedProduct.description || "N/A"}
+            </p>
+          </div>
+        )}
+        <div className="flex justify-end mt-4">
+          <Button onClick={() => setShowViewModal(false)}>Close</Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+app/unauthorized/page.js:
+"use client";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+
+export default function UnauthorizedPage() {
+  const router = useRouter();
+
+  const handleLogin = () => {
+    router.push("/login");
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900"
+    >
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Unauthorized Access
+        </h1>
+        <p className="mt-4 text-gray-700 dark:text-gray-300">
+          You do not have permission to view this page. Please log in to continue.
+        </p>
+        <button
+          onClick={handleLogin}
+          className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
+          Login
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+app/globals.css:
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: white;
+  --text: black;
+}
+
+.dark {
+  --background: #1a1a1a;
+  --text: white;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+main::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.logo-container {
+  animation: pulse 2s infinite;
+}
+
+.tooltip {
+  position: relative;
+}
+
+.tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@import "react-tooltip/dist/react-tooltip.css";
+
+app/layout.js:
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/ThemeContext";
+import { SessionProvider } from "next-auth/react";
+import { SearchProvider } from "@/context/SearchContext";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata = {
+  title: "Floridda",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <SessionProvider>
+          <ThemeProvider>
+            <SearchProvider>{children}</SearchProvider>
+          </ThemeProvider>
+        </SessionProvider>
+      </body>
+    </html>
+  );
+}
+
+app/page.js:
+import { redirect } from "next/navigation";
+
+export default function Home() {
+  redirect ("/login");
+  return null;
+}
+
+components/AuthProvider.js:
+"use client"
+import { SessionProvider } from 'next-auth/react'
+import React from 'react'
+
+const AuthProvider = ({children}) => {
+  return (
+    <main>
+        <SessionProvider>{children}</SessionProvider>
+    </main>
+  )
+}
+
+export default AuthProvider;
+
+components/Button.jsx:
+import React from "react";
+
+export default function Button({
+  onClick,
+  children,
+  disabled = false,
+  className = "",
+  type = "button",
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`px-4 py-2 rounded-lg font-medium transition ${className} ${
+        disabled
+          ? "bg-gray-400 cursor-not-allowed"
+          : "bg-blue-600 hover:bg-blue-700 text-white"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+components/CollapseButton.jsx:
+"use client";
+import { Menu } from "lucide-react";
+
+export default function CollapseButton({ isCollapsed, toggleCollapse }) {
+  return (
+    <button
+      onClick={toggleCollapse}
+      className={`flex items-center p-2 rounded-lg w-full ${
+        isCollapsed ? "justify-center" : "justify-start"
+      } text-gray-900 dark:text-white lg:hidden`}
+    >
+      <Menu className={`w-6 h-6 ${isCollapsed ? "mx-auto" : "mr-3"}`} />
+      {!isCollapsed && <span></span>}
+    </button>
+  );
+}
+
+components/ConfirmDeleteModal.jsx:
+"use client";
+
+export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+          Confirm Deletion
+        </h2>
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Are you sure you want to delete this product?
+        </p>
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+components/Footer.jsx:
+"use client";
+export default function Footer() {
+  const currentYear = new Date().getFullYear();
+  return (
+    <footer className="text-gray-600 dark:text-white text-[0.7em]">
+      <span>© {currentYear} Floridda Software</span>
+    </footer>
+  );
+}
+
+components/FormField.jsx:
+import React from "react";
+
+export default function FormField({
+  label,
+  name,
+  type = "text",
+  value,
+  onChange,
+  required = false,
+  disabled = false,
+}) {
+  return (
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      {label} {required && "*"}
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        required={required}
+        disabled={disabled}
+      />
+    </label>
+  );
+}
+
+components/Layout.jsx:
+"use client";
+import { useState, useEffect } from "react";
+import Sidebar from "./Sidebar";
+import Navbar from "./Navbar";
+
+export default function Layout({ children }) {
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsCollapsed(false);
+      } else {
+        setIsCollapsed(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return (
+    <div className="h-screen bg-white dark:bg-gray-900">
+      <Navbar className="fixed top-0 left-0 w-full z-50" />
+      <div className="flex flex-row h-[calc(100vh-64px)] pt-16">
+        <Sidebar
+          isCollapsed={isCollapsed}
+          toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+          className="transition-all duration-300"
+        />
+        <main
+          className={`flex-1 h-full overflow-y-auto p-6 transition-all duration-300 ${
+            isCollapsed ? "ml-10" : "ml-40"
+          }`}
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+components/Modal.jsx:
+import React from "react";
+
+export default function Modal({ isOpen, children, title }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 fade-in">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-2xl">
+        {title && (
+          <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+            {title}
+          </h2>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+components/Navbar.jsx:
+"use client";
+import Link from "next/link";
+import { Bell, User, PhoneCall, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import ThemeToggle from "./ThemeToggle";
+import SettingsDropdown from "./SettingsDropdown";
+import { useTheme } from "./ThemeContext";
+import { useSession, signOut } from "next-auth/react";
+import { db } from "@/lib/firebaseConfig";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import UserInfo from "./UserInfo";
+import NotificationList from "./NotificationList";
+import SearchBar from "./SearchBar";
+import { Tooltip } from "react-tooltip";
+
+export default function Navbar({ className = "" }) {
+  const { isDarkMode } = useTheme();
+  const { data: session } = useSession();
+  const [notifications, setNotifications] = useState([]);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      const fetchNotifications = async () => {
+        try {
+          const q = query(
+            collection(db, "notifications"),
+            where("userId", "==", session.user.email),
+            where("read", "==", false)
+          );
+          const querySnapshot = await getDocs(q);
+          setNotifications(
+            querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [session]);
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    window.location.replace("/login");
+  };
+
+  return (
+    <nav
+      className={`flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow bg-white dark:bg-gray-900 ${className}`}
+    >
+      <Link href="/dashboard" className="flex gap-2 sm:gap-3 md:gap-4">
+        <div className="flex items-center gap-1 text-2xl font-bold text-blue-400 hover:text-blue-500 transition-colors logo-container">
+          <PhoneCall className="w-4 h-4 lg:w-7 lg:h-7 md:w-6 md:h-6 sm:w-5 sm:h-5" />
+          <h6 className="lg:text-3xl md:text-2xl sm:text-xl text-base">
+            Floridda
+          </h6>
+        </div>
+      </Link>
+
+      <div className="flex flex-1 max-w-2xl mx-4">
+        <SearchBar />
+      </div>
+
+      <div className="hidden items-center gap-8 lg:flex">
+        <ThemeToggle />
+
+        <div
+          className="relative"
+          data-tooltip-id="notifications-tooltip"
+          data-tooltip-content="Notifications"
+        >
+          <button
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              setShowProfileDropdown(false);
+            }}
+            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full relative transition-transform duration-200 transform hover:scale-110"
+          >
+            <Bell className="w-6 h-6" />
+            {notifications.length > 0 && (
+              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+          <Tooltip id="notifications-tooltip" />
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+              <NotificationList onClose={() => setShowNotifications(false)} />
+            </div>
+          )}
+        </div>
+
+        <div
+          className="relative"
+          data-tooltip-id="profile-tooltip"
+          data-tooltip-content="Profile"
+        >
+          <button
+            onClick={() => {
+              setShowProfileDropdown(!showProfileDropdown);
+              setShowNotifications(false);
+            }}
+            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full transition-transform duration-200 transform hover:scale-110"
+          >
+            <User className="w-6 h-6" />
+          </button>
+          <Tooltip id="profile-tooltip" />
+          {showProfileDropdown && (
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+              <UserInfo />
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={handleLogout}
+          className="text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full transition-transform duration-200 transform hover:scale-110"
+          data-tooltip-id="logout-tooltip"
+          data-tooltip-content="Logout"
+        >
+          <LogOut className="w-6 h-6" />
+          <Tooltip id="logout-tooltip" />
+        </button>
+      </div>
+
+      <div className="lg:hidden">
+        <SettingsDropdown />
+      </div>
+    </nav>
+  );
+}
+
+components/NotificationList.jsx:
+"use client";
+import { useState, useEffect } from "react";
+import { db } from "@/lib/firebaseConfig";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { useSession } from "next-auth/react";
+
+export default function NotificationList({ onClose }) {
+  const { data: session } = useSession();
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      const fetchNotifications = async () => {
+        try {
+          const q = query(
+            collection(db, "notifications"),
+            where("userId", "==", session.user.email),
+            where("read", "==", false)
+          );
+          const querySnapshot = await getDocs(q);
+          setNotifications(
+            querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [session]);
+
+  const markAsRead = async (id) => {
+    try {
+      await updateDoc(doc(db, "notifications", id), { read: true });
+      setNotifications(notifications.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  return (
+    <div className="w-64 max-h-64 overflow-y-auto">
+      {notifications.length > 0 ? (
+        notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className="px-4 py-2 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <p>{notification.message}</p>
+            <p className="text-xs">
+              {new Date(notification.timestamp).toLocaleString()}
+            </p>
+            <button
+              onClick={() => markAsRead(notification.id)}
+              className="text-blue-600 hover:underline text-sm"
+            >
+              Mark as Read
+            </button>
+          </div>
+        ))
+      ) : (
+        <p className="px-4 py-2 text-gray-800 dark:text-white">
+          No new notifications
+        </p>
+      )}
+    </div>
+  );
+}
+
+components/ProductList.jsx:
+"use client";
+import { Edit, Trash } from "lucide-react";
+
+export default function ProductList({ products, onEdit, onDelete }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Item
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Quantity
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Amount/Unit
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Model
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Serial
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Category
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Sub Category
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
+          {products.map((product) => (
+            <tr key={product.id}>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.item}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.quantity}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.amountPerUnit}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.modelNumber}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.serialNumber}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.category}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                {product.subCategory}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <button
+                  onClick={() => onEdit(product)}
+                  className="text-blue-600 hover:text-blue-900 mr-4"
+                >
+                  <Edit className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => onDelete(product.id)}
+                  className="text-red-600 hover:text-red-900"
+                >
+                  <Trash className="w-5 h-5" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+componsnts/RegisterProduct.jsx:
+"use client";
+import { useState, useEffect } from "react";
+import { db } from "@/lib/firebaseConfig";
+import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import FormField from "@/components/FormField";
+import Button from "@/components/Button";
+import Modal from "@/components/Modal";
+import { useSession } from "next-auth/react";
+
+export default function RegisterProduct({
+  productToEdit,
+  onClose,
+  onSaveComplete,
+}) {
+  const { data: session } = useSession();
+  const [formData, setFormData] = useState({
+    item: "",
+    quantity: "",
+    costPrice: "",
+    salePrice: "",
+    modelNumber: "",
+    serialNumber: "",
+    color: "",
+    storage: "",
+    category: "",
+    subCategory: "",
+    description: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isEditing = !!productToEdit;
+
+  useEffect(() => {
+    if (productToEdit) {
+      setFormData({
+        item: productToEdit.item || "",
+        quantity: productToEdit.quantity || "",
+        costPrice: productToEdit.costPrice || "",
+        salePrice: productToEdit.salePrice || "",
+        modelNumber: productToEdit.modelNumber || "",
+        serialNumber: productToEdit.serialNumber || "",
+        color: productToEdit.color || "",
+        storage: productToEdit.storage || "",
+        category: productToEdit.category || "",
+        subCategory: productToEdit.subCategory || "",
+        description: productToEdit.description || "",
+      });
+    } else {
+      setFormData({
+        item: "",
+        quantity: "",
+        costPrice: "",
+        salePrice: "",
+        modelNumber: "",
+        serialNumber: "",
+        color: "",
+        storage: "",
+        category: "",
+        subCategory: "",
+        description: "",
+      });
+    }
+  }, [productToEdit]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    // Convert form data to correct types
+    const quantity = parseInt(formData.quantity, 10);
+    const costPrice = parseFloat(formData.costPrice);
+    const salePrice = parseFloat(formData.salePrice);
+
+    // Validate the inputs
+    if (
+      !formData.item.trim() ||
+      isNaN(quantity) ||
+      isNaN(costPrice) ||
+      isNaN(salePrice) ||
+      !formData.modelNumber.trim() ||
+      !formData.serialNumber.trim() ||
+      !formData.category.trim() ||
+      !formData.subCategory.trim()
+    ) {
+      setError("Please fill in all required fields with valid data.");
+      setLoading(false);
+      return;
+    }
+
+    if (quantity <= 0) {
+      setError("Quantity must be a positive number.");
+      setLoading(false);
+      return;
+    }
+    if (costPrice <= 0 || salePrice <= 0) {
+      setError("Prices must be positive numbers.");
+      setLoading(false);
+      return;
+    }
+    if (salePrice < costPrice) {
+      setError("Sale Price must be greater than or equal to Cost Price.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const productData = {
+        item: formData.item,
+        quantity,
+        costPrice,
+        salePrice,
+        modelNumber: formData.modelNumber,
+        serialNumber: formData.serialNumber,
+        color: formData.color,
+        storage: formData.storage,
+        category: formData.category,
+        subCategory: formData.subCategory,
+        description: formData.description,
+      };
+
+      if (isEditing) {
+        await updateDoc(doc(db, "products", productToEdit.id), productData);
+      } else {
+        await addDoc(collection(db, "products"), productData);
+      }
+
+      if (quantity < 5 && session?.user?.email) {
+        await addDoc(collection(db, "notifications"), {
+          userId: session.user.email,
+          message: `${formData.item} is low on stock (${quantity} left)`,
+          read: false,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      onSaveComplete();
+      onClose();
+    } catch (err) {
+      console.error("Error saving product:", err);
+      setError("Failed to save product. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={isEditing ? "Edit Product" : "Register New Product"}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      >
+        <div className="space-y-4">
+          <FormField
+            label="Item Name"
+            name="item"
+            value={formData.item}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+          <FormField
+            label="Quantity"
+            name="quantity"
+            type="number"
+            value={formData.quantity}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            min="1"
+          />
+          <FormField
+            label="Cost Price per Unit"
+            name="costPrice"
+            type="number"
+            value={formData.costPrice}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            step="0.01"
+            min="0.01"
+          />
+          <FormField
+            label="Sale Price per Unit"
+            name="salePrice"
+            type="number"
+            value={formData.salePrice}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            step="0.01"
+            min="0.01"
+          />
+        </div>
+        <div className="space-y-4">
+          <FormField
+            label="Model Number"
+            name="modelNumber"
+            value={formData.modelNumber}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+          <FormField
+            label="Serial Number"
+            name="serialNumber"
+            value={formData.serialNumber}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+          <FormField
+            label="Category"
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+          <FormField
+            label="Sub Category"
+            name="subCategory"
+            value={formData.subCategory}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+          <FormField
+            label="Color"
+            name="color"
+            value={formData.color}
+            onChange={handleChange}
+            disabled={loading}
+          />
+          <FormField
+            label="Storage"
+            name="storage"
+            value={formData.storage}
+            onChange={handleChange}
+            disabled={loading}
+          />
+        </div>
+        <div className="md:col-span-2 space-y-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Description
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              disabled={loading}
+            />
+          </label>
+        </div>
+        {error && (
+          <p className="md:col-span-2 text-red-500 text-sm bg-red-100 p-2 rounded">
+            {error}
+          </p>
+        )}
+        <div className="md:col-span-2 flex justify-end space-x-2 mt-4">
+          <Button onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Saving..." : isEditing ? "Save" : "Register"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+components/SearchBar.jsx:
+"use client";
+import { Search } from "lucide-react";
+import { useSearch } from "@/context/SearchContext";
+import { useRouter } from "next/navigation";
+
+export default function SearchBar() {
+  const { searchTerm, setSearchTerm } = useSearch();
+  const router = useRouter();
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    if (!window.location.pathname.includes("/products")) {
+      router.push("/products");
+    }
+  };
+
+  return (
+    <div className="relative w-full max-w-2xl">
+      <Search className="absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400" />
+      <input
+        type="text"
+        placeholder="Search products..."
+        value={searchTerm}
+        onChange={handleSearch}
+        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  );
+}
+
+components/SettingsDropdown.jsx:
+"use client";
+import { useState, useEffect } from "react";
+import { Sun, Moon, Bell, Settings, LogOut } from "lucide-react";
+import { useTheme } from "./ThemeContext";
+import UserInfo from "./UserInfo";
+import NotificationList from "./NotificationList";
+import { Tooltip } from "react-tooltip";
+import { signOut } from "next-auth/react";
+
+export default function SettingsDropdown() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { isDarkMode, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const closeDropdown = (e) => {
+      if (!e.target.closest(".dropdown-container")) {
+        setIsOpen(false);
+        setShowNotifications(false);
+      }
+    };
+    window.addEventListener("click", closeDropdown);
+    return () => window.removeEventListener("click", closeDropdown);
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false }); 
+    window.location.replace("/login"); 
+  };
+
+  return (
+    <div className="relative dropdown-container">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+        data-tooltip-id="settings-tooltip"
+        data-tooltip-content="Settings"
+      >
+        <Settings className="w-5 h-5" />
+        <Tooltip id="settings-tooltip" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+          <div className="px-4 py-2">
+            <UserInfo />
+          </div>
+          <hr className="my-2" />
+          <button
+            onClick={toggleTheme}
+            className="flex items-center px-4 py-2 w-full text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            {isDarkMode ? (
+              <Sun className="w-5 h-5 mr-3" />
+            ) : (
+              <Moon className="w-5 h-5 mr-3" />
+            )}
+            {isDarkMode ? "Light" : "Dark"}
+          </button>
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="flex items-center px-4 py-2 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 w-full"
+          >
+            <Bell className="w-5 h-5 mr-3" />
+            Notifications
+          </button>
+          {showNotifications && (
+            <div className="px-4 py-2">
+              <NotificationList onClose={() => setShowNotifications(false)} />
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="flex items-center px-4 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 w-full"
+          >
+            <LogOut className="w-5 h-5 mr-3" />
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+componens/Sidebar.jsx:
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Home, Box, DollarSign, PlusSquare } from "lucide-react";
+import CollapseButton from "./CollapseButton";
+import Footer from "./Footer";
+
+export default function Sidebar({
+  isCollapsed,
+  toggleCollapse,
+  className = "",
+}) {
+  const { data: session } = useSession();
+  const path = usePathname() || "";
+
+  const items =
+    session?.user?.role === "admin"
+      ? [
+          { href: "/dashboard", icon: Home, label: "Dashboard" },
+          { href: "/products", icon: Box, label: "Products" },
+          { href: "/sales", icon: DollarSign, label: "Sales" },
+          { href: "/add", icon: PlusSquare, label: "Add" },
+        ]
+      : [
+          { href: "/dashboard", icon: Home, label: "Dashboard" },
+          { href: "/sales", icon: DollarSign, label: "Sales" },
+        ];
+
+  return (
+    <aside
+      className={`fixed top-16 left-0 h-[calc(100vh-64px)] z-40 flex flex-col bg-white dark:bg-gray-900 transition-all duration-300 ${
+        isCollapsed ? "w-10" : "w-40"
+      } ${className}`}
+    >
+      <nav className="flex-1 px-2 py-4 overflow-y-auto">
+        <ul className="space-y-2">
+          <li>
+            <CollapseButton
+              isCollapsed={isCollapsed}
+              toggleCollapse={toggleCollapse}
+            />
+          </li>
+          {items.map(({ href, icon: Icon, label }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className={`flex items-center p-2 rounded-lg ${
+                  path === href
+                    ? "bg-blue-200 dark:bg-blue-400 text-gray-900 dark:text-white font-semibold"
+                    : "text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                <Icon
+                  className={`w-6 h-6 ${isCollapsed ? "mx-auto" : "mr-3"}`}
+                />
+                {!isCollapsed && <span>{label}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      {!isCollapsed && (
+        <div className="px-2 py-4 border-t border-gray-900 dark:border-white shrink-0">
+          <Footer />
+        </div>
+      )}
+    </aside>
+  );
+}
+
+components/Table.jsx:
+import React from "react";
+
+export default function Table({ columns, data, actions = [] }) {
+  return (
+    <div className="overflow-x-auto fade-in">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            {columns.map((col) => (
+              <th
+                key={col.key}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"
+              >
+                {col.label}
+              </th>
+            ))}
+            {actions.length > 0 && (
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                Actions
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
+          {data.map((row) => (
+            <tr key={row.id}>
+              {columns.map((col) => (
+                <td
+                  key={col.key}
+                  className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white"
+                >
+                  {row[col.key]}
+                </td>
+              ))}
+              {actions.length > 0 && (
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {actions.map((action, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => action.onClick(row)}
+                      className="mr-4"
+                    >
+                      {action.icon || action.label}
+                    </button>
+                  ))}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+components/ThemeContext.js:
+'use client';
+import { createContext, useContext, useState, useEffect } from 'react';
+
+const ThemeContext = createContext();
+
+export const ThemeProvider = ({ children }) => {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleTheme = () => setIsDarkMode(prev => !prev);
+
+  return (
+    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => useContext(ThemeContext);
+
+componensts/ThemeToggle.jsx:
+"use client";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "./ThemeContext";
+import { useState, useEffect } from "react";
+
+export default function ThemeToggle() {
+  const { isDarkMode, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <button className="p-2 rounded-full opacity-0" aria-hidden="true" />;
+  }
+
+  return (
+    <button
+      onClick={toggleTheme}
+      aria-label="Toggle theme"
+      className="p-2 rounded-full bg-white dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-900 transition-colors"
+    >
+      {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+    </button>
+  );
+}
+
+components/UserInfo.jsx:
+"use client";
+import { useSession } from "next-auth/react";
+
+const capitalize = (str) => {
+  if (!str) return "Unknown"; 
+  const lower = str.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1); 
+};
+
+export default function UserInfo() {
+  const { data: session } = useSession();
+  if (!session) return null;
+
+  return (
+    <div className="text-gray-800 dark:text-white">
+      <p>
+        <strong>Name:</strong> {session.user.name || "N/A"}
+      </p>
+      <p>
+        <strong>Email:</strong> {session.user.email}
+      </p>
+      <p>
+        <strong>Role:</strong> {capitalize(session.user.role)}
+      </p>
+    </div>
+  );
+}
+
+context/SearchContext.js:
+'use client';
+import { createContext, useContext, useState } from 'react';
+
+const SearchContext = createContext();
+
+export const SearchProvider = ({ children }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  return (
+    <SearchContext.Provider value={{ searchTerm, setSearchTerm }}>
+      {children}
+    </SearchContext.Provider>
+  );
+};
+
+export const useSearch = () => useContext(SearchContext);
+
+lib/firebaseConfig.js:
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app)
+export {db}
+
+lib/productService.js:
+import { db } from "./firebaseConfig";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+
+const productsCollection = collection(db, "products");
+
+export const productService = {
+  addProduct: async (product) => {
+    try {
+      const docRef = await addDoc(productsCollection, product);
+      return { id: docRef.id, ...product };
+    } catch (error) {
+      console.error("Error adding product:", error);
+      throw error;
+    }
+  },
+
+  getProducts: async () => {
+    try {
+      const snapshot = await getDocs(productsCollection);
+      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Error getting products:", error);
+      throw error;
+    }
+  },
+
+  updateProduct: async (id, updates) => {
+    try {
+      await updateDoc(doc(db, "products", id), updates);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      throw error;
+    }
+  },
+
+  deleteProduct: async (id) => {
+    try {
+      await deleteDoc(doc(db, "products", id));
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      throw error;
+    }
+  },
+};
+
+Go through this code thoroughly and tell me where the error is coming from and fix it by providing guidance and the full implementation
+
+Please remember I am new to this I have no knowledge on this so put me through with patience
+Go through the everything thoroughly and ensure that everything is working perfectly
+
+I forgot to mention please everything you are providing should be in full, don't give me half code implementations or telling me replace this with this or keep this existing 
+Just provide the full implementation even if any improvement is done on an existing code just provide the full hope you understand?

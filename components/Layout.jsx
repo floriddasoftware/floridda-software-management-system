@@ -27,10 +27,9 @@ export default function Layout({ children }) {
         <Sidebar
           isCollapsed={isCollapsed}
           toggleCollapse={() => setIsCollapsed(!isCollapsed)}
-          className="transition-all duration-300"
         />
         <main
-          className={`flex-1 h-full overflow-y-auto p-6 transition-all duration-300 ${
+          className={`flex-1 h-full overflow-y-auto p-6 ${
             isCollapsed ? "ml-10" : "ml-40"
           }`}
         >

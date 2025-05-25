@@ -48,14 +48,17 @@ export default function Navbar({ className = "" }) {
 
   return (
     <nav
-      className={`flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow bg-white dark:bg-gray-900 ${className}`}
+      className={`flex items-center justify-between h-16 w-screen px-4 sm:px-5 lg:px-6 shadow shadow-gray-950 dark:shadow-white bg-white dark:bg-gray-900 ${className}`}
     >
-      <Link href="/dashboard" className="flex gap-2 sm:gap-3 md:gap-4">
-        <div className="flex items-center gap-1 text-2xl font-bold text-blue-400 hover:text-blue-500 transition-colors logo-container">
-          <PhoneCall className="w-4 h-4 lg:w-7 lg:h-7 md:w-6 md:h-6 sm:w-5 sm:h-5" />
-          <h6 className="lg:text-3xl md:text-2xl sm:text-xl text-base">
-            Floridda
-          </h6>
+      <Link href="/dashboard">
+        <div className="flex items-center gap-1 transition-colors logo-container">
+          <PhoneCall className="w-4 h-4 lg:w-7 lg:h-7 md:w-6 md:h-6 sm:w-5 sm:h-5 mt-3 text-red-950" />
+          <div className="flex flex-col items-center text-blue-400 hover:text-blue-500 lg:-space-y-2 -space-y-1">
+            <h6 className="lg:text-[24px] md:text-[20px] sm:text-[16px] text-[12px] font-bold">
+              Floridda
+            </h6>
+            <h6 className="lg:text-[12px] md:text-[10px] sm-text-[8px] text-[6px] m-0 leading-tight">Software</h6>
+          </div>
         </div>
       </Link>
 

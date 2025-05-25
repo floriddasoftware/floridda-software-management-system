@@ -9,7 +9,7 @@ export default function CollapseButton({ isCollapsed, toggleCollapse }) {
         isCollapsed ? "justify-center" : "justify-start"
       } text-gray-900 dark:text-white lg:hidden`}
     >
-      <Menu className={`w-6 h-6 ${isCollapsed ? "mx-auto" : "mr-3"}`} />
+      <Menu className={`w-8 h-8 ${isCollapsed ? "mx-auto" : "mr-3"}`} />
       {!isCollapsed && <span></span>}
     </button>
   );

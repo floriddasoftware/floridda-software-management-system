@@ -31,8 +31,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 shadow-lg">
-      <div className="absolute top-4 right-4">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 shadow-lg dark:shadow-lg">
+      <div className="absolute top-4 right-4 ">
         <ThemeToggle />
       </div>
 
