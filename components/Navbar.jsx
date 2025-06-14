@@ -57,7 +57,9 @@ export default function Navbar({ className = "" }) {
             <h6 className="lg:text-[24px] md:text-[20px] sm:text-[16px] text-[12px] font-bold">
               Floridda
             </h6>
-            <h6 className="lg:text-[12px] md:text-[10px] sm-text-[8px] text-[6px] m-0 leading-tight">Software</h6>
+            <h6 className="lg:text-[12px] md:text-[10px] sm-text-[8px] text-[6px] m-0 leading-tight">
+              Software
+            </h6>
           </div>
         </div>
       </Link>

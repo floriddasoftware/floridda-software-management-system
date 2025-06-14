@@ -4,7 +4,7 @@ export async function middleware(request) {
   const path = request.nextUrl.pathname;
 
   const protectedRoutes = {
-    "/dashboard": ["admin", "salesperson"],
+    // "/dashboard": ["admin", "salesperson"],
     "/products": ["admin"],
     "/sales": ["admin", "salesperson"],
     "/add": ["admin"],

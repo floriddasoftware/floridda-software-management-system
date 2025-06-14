@@ -36,8 +36,8 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
 
-      <div className="bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-400 rounded-xl overflow-hidden flex flex-col md:flex-row w-full max-w-6xl shadow-2xl">
-        <div className="hidden md:block relative md:w-1/2">
+      <div className="bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-400 rounded-xl overflow-hidden flex flex-col lg:flex-row w-full lg:max-w-6xl shadow-2xl lg:mx-0 md:mx-4 mx-2">
+        <div className="hidden lg:block relative lg:w-1/2">
           <Image
             src="/Phones.jpg"
             alt="Shopping illustration"
@@ -46,13 +46,13 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="p-8 w-full md:w-1/2">
+        <div className="p-8 w-full lg:w-1/2">
           <div className="flex flex-col items-center mb-8">
             <Smartphone className="h-12 w-12 text-purple-600" />
             <p className="mt-1 text-gray-600 dark:text-gray-100">
               Welcome to{" "}
               <span className="font-semibold text-gray-900 dark:text-white">
-                Floridda Software
+                <i>Floridda Software</i>
               </span>
             </p>
           </div>
