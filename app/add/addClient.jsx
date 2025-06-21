@@ -23,29 +23,42 @@ export default function AddClient({ initialSalespersons }) {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!session || session.user.role !== "admin") {
-      toast.error("Unauthorized action");
+      toast.error("Only admin can add salespeople");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
       return;
     }
 
     setLoading(true);
     try {
       const newSalesperson = {
-        ...formData,
+        email: formData.email.toLowerCase(),
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
         role: "salesperson",
         addedBy: session.user.email,
       };
 
-      const docRef = await addDoc(
-        collection(db, "salespeople"),
-        newSalesperson
-      );
+      const existingUserQuery = await db
+        .collection("users")
+        .where("email", "==", newSalesperson.email)
+        .get();
+      if (!existingUserQuery.empty) {
+        throw new Error("This email is already registered");
+      }
+
+      const docRef = await addDoc(collection(db, "users"), newSalesperson);
       setSalespersons([...salespersons, { id: docRef.id, ...newSalesperson }]);
       toast.success("Salesperson added successfully!");
       setFormData({ email: "", name: "", phone: "" });
       setShowAddModal(false);
     } catch (error) {
-      toast.error("Failed to add salesperson.");
       console.error("Error adding salesperson:", error);
+      toast.error(error.message || "Failed to add salesperson");
     } finally {
       setLoading(false);
     }
@@ -57,7 +70,7 @@ export default function AddClient({ initialSalespersons }) {
 
   const handleDelete = (salesperson) => {
     if (!session || session.user.role !== "admin") {
-      toast.error("Unauthorized action");
+      toast.error("Only admin can delete salespeople");
       return;
     }
     setSalespersonToDelete(salesperson);
@@ -72,14 +85,14 @@ export default function AddClient({ initialSalespersons }) {
 
     setLoading(true);
     try {
-      await deleteDoc(doc(db, "salespeople", salespersonToDelete.id));
+      await deleteDoc(doc(db, "users", salespersonToDelete.id));
       setSalespersons(
         salespersons.filter((s) => s.id !== salespersonToDelete.id)
       );
       toast.success("Salesperson deleted successfully!");
     } catch (error) {
       console.error("Error deleting salesperson:", error);
-      toast.error("Failed to delete salesperson.");
+      toast.error("Failed to delete salesperson");
     } finally {
       setLoading(false);
       setShowConfirmDelete(false);
@@ -107,9 +120,9 @@ export default function AddClient({ initialSalespersons }) {
       <div className="flex justify-end mb-8">
         <Button
           onClick={() => setShowAddModal(true)}
-          disabled={loading || (session && session.user.role !== "admin")}
+          disabled={loading || !session || session.user.role !== "admin"}
         >
-          Add
+          Add Salesperson
         </Button>
       </div>
 

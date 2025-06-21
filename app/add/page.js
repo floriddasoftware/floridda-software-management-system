@@ -3,7 +3,10 @@ import AddClient from "./addClient";
 
 async function fetchSalespersons() {
   try {
-    const salespersonsSnapshot = await adminDb.collection("salespeople").get();
+    const salespersonsSnapshot = await adminDb
+      .collection("users")
+      .where("role", "==", "salesperson")
+      .get();
     const allSalespersons = salespersonsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
