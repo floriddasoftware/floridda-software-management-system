@@ -68,12 +68,10 @@ export default function RegisterProduct({
     setError("");
     setLoading(true);
 
-    // Convert form data to correct types
     const quantity = parseInt(formData.quantity, 10);
     const costPrice = parseFloat(formData.costPrice);
     const salePrice = parseFloat(formData.salePrice);
 
-    // Validate the inputs
     if (
       !formData.item.trim() ||
       isNaN(quantity) ||
@@ -118,12 +116,16 @@ export default function RegisterProduct({
         category: formData.category,
         subCategory: formData.subCategory,
         description: formData.description,
+        owner: session?.user?.id || "", 
       };
 
+      let savedProduct;
       if (isEditing) {
         await updateDoc(doc(db, "products", productToEdit.id), productData);
+        savedProduct = { id: productToEdit.id, ...productData };
       } else {
-        await addDoc(collection(db, "products"), productData);
+        const docRef = await addDoc(collection(db, "products"), productData);
+        savedProduct = { id: docRef.id, ...productData };
       }
 
       if (quantity < 5 && session?.user?.email) {
@@ -134,8 +136,7 @@ export default function RegisterProduct({
           timestamp: new Date().toISOString(),
         });
       }
-      onSaveComplete();
-      onClose();
+      onSaveComplete(savedProduct);
     } catch (err) {
       console.error("Error saving product:", err);
       setError("Failed to save product. Please try again.");

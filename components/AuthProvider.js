@@ -1,13 +1,13 @@
-"use client"
-import { SessionProvider } from 'next-auth/react'
-import React from 'react'
+"use client";
+import { SessionProvider } from "next-auth/react";
+import React from "react";
 
-const AuthProvider = ({children}) => {
+const AuthProvider = ({ children }) => {
   return (
-    <main>
-        <SessionProvider>{children}</SessionProvider>
-    </main>
-  )
-}
+    <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true}>
+      {children}
+    </SessionProvider>
+  );
+};
 
 export default AuthProvider;
