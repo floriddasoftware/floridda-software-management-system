@@ -29,7 +29,7 @@ export default function NotificationList({ onClose }) {
             querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
           );
         } catch (error) {
-          console.error("Error fetching notifications:", error);
+          // Silently handle error
         }
       };
       fetchNotifications();
@@ -41,7 +41,7 @@ export default function NotificationList({ onClose }) {
       await updateDoc(doc(db, "notifications", id), { read: true });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      // Silently handle error
     }
   };
 

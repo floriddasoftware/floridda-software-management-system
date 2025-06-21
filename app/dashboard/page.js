@@ -18,7 +18,6 @@ async function fetchDashboardData() {
 
     return { salesData, productsData };
   } catch (error) {
-    console.error("Error fetching dashboard data:", error);
     return { salesData: [], productsData: [] };
   }
 }

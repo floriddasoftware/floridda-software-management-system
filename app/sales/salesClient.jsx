@@ -39,7 +39,6 @@ export default function SalesClient({ initialProducts }) {
         setProducts(productsData);
       },
       (err) => {
-        console.error("Error listening to products:", err);
         toast.error("Failed to update products in real-time.");
         setError("Failed to update products in real-time.");
       }
@@ -64,6 +63,13 @@ export default function SalesClient({ initialProducts }) {
       toast.error("Please enter a valid quantity.");
       return;
     }
+
+    if (!session) {
+      setError("Authentication required");
+      toast.error("Authentication required");
+      return;
+    }
+
     const quantityToSell = parseInt(sellQuantity);
     if (quantityToSell > selectedProduct.quantity) {
       setError("Cannot sell more than available quantity!");
@@ -74,6 +80,7 @@ export default function SalesClient({ initialProducts }) {
     setLoading(true);
     try {
       const newQuantity = selectedProduct.quantity - quantityToSell;
+
       if (newQuantity > 0) {
         await updateDoc(doc(db, "products", selectedProduct.id), {
           quantity: newQuantity,
@@ -97,7 +104,7 @@ export default function SalesClient({ initialProducts }) {
         salePrice: selectedProduct.salePrice,
         costPrice: selectedProduct.costPrice,
         totalAmount: quantityToSell * selectedProduct.salePrice,
-        salespersonId: session?.user?.email || "unknown",
+        salespersonId: session.user.email,
         timestamp: new Date().toISOString(),
       });
 
@@ -114,7 +121,6 @@ export default function SalesClient({ initialProducts }) {
       setShowSellModal(false);
       setSelectedProduct(null);
     } catch (error) {
-      console.error("Error processing sale:", error);
       setError("Failed to process sale. Please try again.");
       toast.error("Failed to process sale.");
     } finally {

@@ -10,7 +10,6 @@ async function fetchInitialProducts() {
     }));
     return productsData;
   } catch (error) {
-    console.error("Error fetching initial products:", error);
     return [];
   }
 }

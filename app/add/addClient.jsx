@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { db } from "@/lib/firebaseConfig";
-import { collection, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, query, where, getDocs } from "firebase/firestore";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Table from "@/components/Table";
@@ -10,9 +10,11 @@ import { Trash } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useSession } from "next-auth/react";
+import { useSearch } from "@/context/SearchContext";
 
 export default function AddClient({ initialSalespersons }) {
   const { data: session } = useSession();
+  const { searchTerm } = useSearch();
   const [salespersons, setSalespersons] = useState(initialSalespersons || []);
   const [formData, setFormData] = useState({ email: "", name: "", phone: "" });
   const [loading, setLoading] = useState(false);
@@ -43,11 +45,12 @@ export default function AddClient({ initialSalespersons }) {
         addedBy: session.user.email,
       };
 
-      const existingUserQuery = await db
-        .collection("users")
-        .where("email", "==", newSalesperson.email)
-        .get();
-      if (!existingUserQuery.empty) {
+      const q = query(
+        collection(db, "users"),
+        where("email", "==", newSalesperson.email)
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
         throw new Error("This email is already registered");
       }
 
@@ -57,7 +60,6 @@ export default function AddClient({ initialSalespersons }) {
       setFormData({ email: "", name: "", phone: "" });
       setShowAddModal(false);
     } catch (error) {
-      console.error("Error adding salesperson:", error);
       toast.error(error.message || "Failed to add salesperson");
     } finally {
       setLoading(false);
@@ -91,7 +93,6 @@ export default function AddClient({ initialSalespersons }) {
       );
       toast.success("Salesperson deleted successfully!");
     } catch (error) {
-      console.error("Error deleting salesperson:", error);
       toast.error("Failed to delete salesperson");
     } finally {
       setLoading(false);
@@ -99,6 +100,11 @@ export default function AddClient({ initialSalespersons }) {
       setSalespersonToDelete(null);
     }
   };
+
+  const filteredSalespersons = salespersons.filter((salesperson) =>
+    salesperson.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    salesperson.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const columns = [
     { key: "name", label: "Name" },
@@ -126,11 +132,11 @@ export default function AddClient({ initialSalespersons }) {
         </Button>
       </div>
 
-      {salespersons.length > 0 ? (
-        <Table columns={columns} data={salespersons} actions={actions} />
+      {filteredSalespersons.length > 0 ? (
+        <Table columns={columns} data={filteredSalespersons} actions={actions} />
       ) : (
         <p className="text-gray-900 dark:text-white">
-          No salespeople added yet.
+          No salespeople found.
         </p>
       )}
 

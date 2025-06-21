@@ -23,7 +23,6 @@ async function fetchProductsData() {
     });
     return productsData;
   } catch (error) {
-    console.error("Error fetching products:", error);
     return [];
   }
 }

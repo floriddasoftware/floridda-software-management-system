@@ -9,6 +9,7 @@ import Button from "@/components/Button";
 import { Edit, Trash } from "lucide-react";
 import { useSearch } from "@/context/SearchContext";
 import { useSession } from "next-auth/react";
+import { toast } from "react-toastify";
 
 export default function ProductsClient({ initialProducts }) {
   const { data: session } = useSession();
@@ -48,8 +49,9 @@ export default function ProductsClient({ initialProducts }) {
     try {
       await deleteDoc(doc(db, "products", productToDelete.id));
       setProducts(products.filter((p) => p.id !== productToDelete.id));
+      toast.success("Product deleted successfully!");
     } catch (error) {
-      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
     } finally {
       setLoading(false);
       setShowConfirmDelete(false);

@@ -26,9 +26,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async signIn({ user }) {
-      console.log("SignIn callback - User email:", user.email);
       if (user.email === ADMIN_EMAIL) {
-        console.log("Admin sign-in allowed");
         return true;
       }
 
@@ -40,21 +38,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .get();
 
         const allowed = !querySnapshot.empty;
-        console.log(`Salesperson check for ${user.email}: ${allowed}`);
         return allowed;
       } catch (error) {
-        console.error("Error checking user role in signIn:", error);
         return false;
       }
     },
     async session({ session }) {
       const { email } = session.user;
-      console.log("Session callback - User email:", email);
 
       if (email === ADMIN_EMAIL) {
         session.user.role = "admin";
         session.user.name = "Floridda";
-        console.log("Admin role assigned:", session.user);
 
         try {
           const adminQuery = await adminDb
@@ -68,13 +62,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               role: "admin",
               name: "Floridda",
             });
-            console.log("Admin user created in Firestore");
           }
         } catch (error) {
-          console.error("Error ensuring admin exists:", error);
         }
       } else {
-        // For salespeople, rely on FirestoreAdapter data if available
         if (!session.user.role) {
           try {
             const userQuery = await adminDb
@@ -85,14 +76,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               const userData = userQuery.docs[0].data();
               session.user.role = userData.role || "unknown";
               session.user.name = userData.name || "N/A";
-              console.log("Salesperson role assigned:", session.user);
             } else {
               session.user.role = "unknown";
               session.user.name = "N/A";
-              console.log("No user data found, set to unknown:", session.user);
             }
           } catch (error) {
-            console.error("Error fetching user data:", error);
             session.user.role = "unknown";
             session.user.name = "N/A";
           }

@@ -116,7 +116,7 @@ export default function RegisterProduct({
         category: formData.category,
         subCategory: formData.subCategory,
         description: formData.description,
-        owner: session?.user?.id || "", 
+        owner: session?.user?.id || "",
       };
 
       let savedProduct;
@@ -138,7 +138,6 @@ export default function RegisterProduct({
       }
       onSaveComplete(savedProduct);
     } catch (err) {
-      console.error("Error saving product:", err);
       setError("Failed to save product. Please try again.");
     } finally {
       setLoading(false);

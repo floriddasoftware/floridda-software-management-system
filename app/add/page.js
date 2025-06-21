@@ -13,7 +13,6 @@ async function fetchSalespersons() {
     }));
     return allSalespersons;
   } catch (error) {
-    console.error("Error fetching salespersons:", error);
     return [];
   }
 }

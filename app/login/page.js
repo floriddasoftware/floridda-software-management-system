@@ -37,7 +37,6 @@ export default function LoginPage() {
         const querySnapshot = await getDocs(q);
         setIsValidEmail(!querySnapshot.empty);
       } catch (error) {
-        console.error("Error checking email:", error);
         setIsValidEmail(false);
       }
     };
@@ -120,11 +119,6 @@ export default function LoginPage() {
                 required
                 disabled={loading}
               />
-              {/* {email && !isValidEmail && (
-                // <p className="text-red-500 text-sm mt-1">
-                //   This email is not authorized to access the system
-                // </p>
-              )} */}
             </div>
 
             <button

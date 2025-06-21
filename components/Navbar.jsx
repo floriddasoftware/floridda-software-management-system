@@ -34,7 +34,7 @@ export default function Navbar({ className = "" }) {
             querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
           );
         } catch (error) {
-          console.error("Error fetching notifications:", error);
+          // Silently handle error
         }
       };
       fetchNotifications();
