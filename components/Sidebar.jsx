@@ -29,7 +29,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed top-16 left-0 h-[calc(100vh-64px)] z-40 flex flex-col bg-white dark:bg-gray-900 ${
+      className={`fixed top-16 left-0 h-[calc(100vh-64px)] z-40 flex flex-col bg-white dark:bg-gray-900 transition-all duration-300 ${
         isCollapsed ? "w-12" : "w-40 shadow shadow-gray-950 dark:shadow-white"
       } ${className}`}
     >

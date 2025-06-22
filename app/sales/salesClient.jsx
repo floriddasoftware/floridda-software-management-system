@@ -39,12 +39,13 @@ export default function SalesClient({ initialProducts }) {
         setProducts(productsData);
       },
       (err) => {
-        toast.error("Failed to update products in real-time.");
+        toast.error("Failed to update products in real-time. Using initial data.");
         setError("Failed to update products in real-time.");
+        // Keep initialProducts as fallback
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [initialProducts]);
 
   const filteredProducts = products.filter((product) =>
     product.item.toLowerCase().includes(searchTerm.toLowerCase())
@@ -58,9 +59,16 @@ export default function SalesClient({ initialProducts }) {
   };
 
   const confirmSell = async () => {
-    if (!selectedProduct || !sellQuantity || sellQuantity <= 0) {
+    if (!selectedProduct || !sellQuantity) {
       setError("Please enter a valid quantity.");
       toast.error("Please enter a valid quantity.");
+      return;
+    }
+
+    const quantityToSell = parseInt(sellQuantity, 10);
+    if (isNaN(quantityToSell) || quantityToSell <= 0) {
+      setError("Quantity must be a positive number.");
+      toast.error("Quantity must be a positive number.");
       return;
     }
 
@@ -70,7 +78,6 @@ export default function SalesClient({ initialProducts }) {
       return;
     }
 
-    const quantityToSell = parseInt(sellQuantity);
     if (quantityToSell > selectedProduct.quantity) {
       setError("Cannot sell more than available quantity!");
       toast.error("Cannot sell more than available quantity!");
@@ -120,6 +127,7 @@ export default function SalesClient({ initialProducts }) {
       toast.success("Sale processed successfully!");
       setShowSellModal(false);
       setSelectedProduct(null);
+      setSellQuantity("");
     } catch (error) {
       setError("Failed to process sale. Please try again.");
       toast.error("Failed to process sale.");
@@ -237,6 +245,18 @@ export default function SalesClient({ initialProducts }) {
             <p>
               <strong>Description:</strong>{" "}
               {selectedProduct.description || "N/A"}
+            </p>
+            <p>
+              <strong>Created At:</strong>{" "}
+              {selectedProduct.createdAt
+                ? new Date(selectedProduct.createdAt).toLocaleString()
+                : "N/A"}
+            </p>
+            <p>
+              <strong>Updated At:</strong>{" "}
+              {selectedProduct.updatedAt
+                ? new Date(selectedProduct.updatedAt).toLocaleString()
+                : "N/A"}
             </p>
           </div>
         )}

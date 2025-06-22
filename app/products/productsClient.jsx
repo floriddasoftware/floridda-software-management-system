@@ -16,7 +16,7 @@ export default function ProductsClient({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts);
   const [showModal, setShowModal] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false); 
   const [productToDelete, setProductToDelete] = useState(null);
   const [loading, setLoading] = useState(false);
   const { searchTerm } = useSearch();
@@ -68,6 +68,16 @@ export default function ProductsClient({ initialProducts }) {
     product.item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const formattedProducts = filteredProducts.map((product) => ({
+    ...product,
+    createdAt: product.createdAt
+      ? new Date(product.createdAt).toLocaleString()
+      : "N/A",
+    updatedAt: product.updatedAt
+      ? new Date(product.updatedAt).toLocaleString()
+      : "N/A",
+  }));
+
   const columns = [
     { key: "item", label: "Item" },
     { key: "quantity", label: "Quantity" },
@@ -77,6 +87,8 @@ export default function ProductsClient({ initialProducts }) {
     { key: "serialNumber", label: "Serial" },
     { key: "category", label: "Category" },
     { key: "subCategory", label: "Sub Category" },
+    { key: "createdAt", label: "Created At" },
+    { key: "updatedAt", label: "Updated At" },
   ];
 
   const actions = [
@@ -106,8 +118,8 @@ export default function ProductsClient({ initialProducts }) {
         />
       )}
 
-      {filteredProducts.length > 0 ? (
-        <Table columns={columns} data={filteredProducts} actions={actions} />
+      {formattedProducts.length > 0 ? (
+        <Table columns={columns} data={formattedProducts} actions={actions} />
       ) : (
         <p className="text-gray-900 dark:text-white">No products found.</p>
       )}

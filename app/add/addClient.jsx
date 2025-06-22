@@ -34,6 +34,10 @@ export default function AddClient({ initialSalespersons }) {
       toast.error("Please enter a valid email address");
       return;
     }
+    if (!formData.name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
 
     setLoading(true);
     try {

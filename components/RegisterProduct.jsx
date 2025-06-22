@@ -6,6 +6,7 @@ import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
+import { toast } from "react-toastify";
 
 export default function RegisterProduct({
   productToEdit,
@@ -35,9 +36,9 @@ export default function RegisterProduct({
     if (productToEdit) {
       setFormData({
         item: productToEdit.item || "",
-        quantity: productToEdit.quantity || "",
-        costPrice: productToEdit.costPrice || "",
-        salePrice: productToEdit.salePrice || "",
+        quantity: productToEdit.quantity.toString() || "",
+        costPrice: productToEdit.costPrice.toString() || "",
+        salePrice: productToEdit.salePrice.toString() || "",
         modelNumber: productToEdit.modelNumber || "",
         serialNumber: productToEdit.serialNumber || "",
         color: productToEdit.color || "",
@@ -83,40 +84,47 @@ export default function RegisterProduct({
       !formData.subCategory.trim()
     ) {
       setError("Please fill in all required fields with valid data.");
+      toast.error("Please fill in all required fields with valid data.");
       setLoading(false);
       return;
     }
 
     if (quantity <= 0) {
       setError("Quantity must be a positive number.");
+      toast.error("Quantity must be a positive number.");
       setLoading(false);
       return;
     }
     if (costPrice <= 0 || salePrice <= 0) {
       setError("Prices must be positive numbers.");
+      toast.error("Prices must be positive numbers.");
       setLoading(false);
       return;
     }
     if (salePrice < costPrice) {
       setError("Sale Price must be greater than or equal to Cost Price.");
+      toast.error("Sale Price must be greater than or equal to Cost Price.");
       setLoading(false);
       return;
     }
 
     try {
+      const timestamp = new Date().toISOString();
       const productData = {
-        item: formData.item,
+        item: formData.item.trim(),
         quantity,
         costPrice,
         salePrice,
-        modelNumber: formData.modelNumber,
-        serialNumber: formData.serialNumber,
-        color: formData.color,
-        storage: formData.storage,
-        category: formData.category,
-        subCategory: formData.subCategory,
-        description: formData.description,
-        owner: session?.user?.id || "",
+        modelNumber: formData.modelNumber.trim(),
+        serialNumber: formData.serialNumber.trim(),
+        color: formData.color.trim(),
+        storage: formData.storage.trim(),
+        category: formData.category.trim(),
+        subCategory: formData.subCategory.trim(),
+        description: formData.description.trim(),
+        owner: session?.user?.email || "",
+        createdAt: isEditing ? productToEdit.createdAt : timestamp,
+        updatedAt: timestamp,
       };
 
       let savedProduct;
@@ -136,9 +144,11 @@ export default function RegisterProduct({
           timestamp: new Date().toISOString(),
         });
       }
+      toast.success("Product saved successfully!");
       onSaveComplete(savedProduct);
     } catch (err) {
       setError("Failed to save product. Please try again.");
+      toast.error("Failed to save product. Please try again.");
     } finally {
       setLoading(false);
     }
