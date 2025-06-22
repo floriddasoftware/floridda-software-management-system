@@ -7,10 +7,19 @@ async function fetchSalespersons() {
       .collection("users")
       .where("role", "==", "salesperson")
       .get();
-    const allSalespersons = salespersonsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    
+    const allSalespersons = salespersonsSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      const convertedData = {};
+      Object.entries(data).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && 'toDate' in value) {
+          convertedData[key] = value.toDate().toISOString();
+        } else {
+          convertedData[key] = value;
+        }
+      });
+      return { id: doc.id, ...convertedData };
+    });
     return allSalespersons;
   } catch (error) {
     return [];

@@ -18,6 +18,10 @@ import {
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useTheme } from "@/components/ThemeContext";
+import { utils, writeFile } from 'xlsx-js-style';
+import { saveAs } from 'file-saver';
+import Button from "@/components/Button";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function DashboardClient({ salesData, productsData }) {
   const { data: session, status } = useSession();
@@ -25,21 +29,22 @@ export default function DashboardClient({ salesData, productsData }) {
   const { isDarkMode } = useTheme();
   const [viewType, setViewType] = useState("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [generatingReport, setGeneratingReport] = useState(false);
 
-  // Use useEffect to handle navigation after render
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
-  }, [status, router]); // Dependencies: run when status or router changes
+  }, [status, router]);
 
   if (status === "loading") {
     return (
-      <p className="text-gray-900 dark:text-white p-4">Loading dashboard...</p>
+      <div className="flex justify-center py-8">
+        <LoadingSpinner size="md" />
+      </div>
     );
   }
 
-  // If unauthenticated, return null since navigation is handled in useEffect
   if (status === "unauthenticated") {
     return null;
   }
@@ -102,18 +107,8 @@ export default function DashboardClient({ salesData, productsData }) {
       return chartData.sort((a, b) => parseInt(a.time) - parseInt(b.time));
     } else if (viewType === "year") {
       const months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
       ];
       return chartData.sort(
         (a, b) => months.indexOf(a.time) - months.indexOf(b.time)
@@ -136,6 +131,30 @@ export default function DashboardClient({ salesData, productsData }) {
       name,
       value,
     }));
+  };
+
+  const generateSalesReport = () => {
+    setGeneratingReport(true);
+    try {
+      const reportData = filteredSales.map(sale => ({
+        Date: new Date(sale.timestamp).toLocaleString(),
+        Product: sale.item,
+        Quantity: sale.quantity,
+        "Unit Price": sale.salePrice,
+        "Total Amount": sale.totalAmount,
+        "Salesperson": sale.salespersonId,
+      }));
+  
+      const worksheet = utils.json_to_sheet(reportData);
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, "Sales Report");
+      writeFile(workbook, `sales-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error("Failed to generate report:", error);
+      toast.error("Failed to generate report");
+    } finally {
+      setGeneratingReport(false);
+    }
   };
 
   const userSales =
@@ -176,19 +195,22 @@ export default function DashboardClient({ salesData, productsData }) {
         Dashboard Overview
       </h1>
 
-      <div className="mb-4 flex items-center">
-        <label className="mr-2 text-gray-900 dark:text-white md:text-lg text-xs">
-          View Type:
-        </label>
-        <select
-          value={viewType}
-          onChange={(e) => setViewType(e.target.value)}
-          className="md:mr-4 mr-2 md:p-2 md:w-24 w-12 border rounded bg-white dark:bg-gray-700 dark:text-white md:text-lg text-xs"
-        >
-          <option value="day">Day</option>
-          <option value="month">Month</option>
-          <option value="year">Year</option>
-        </select>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex items-center">
+          <label className="mr-2 text-gray-900 dark:text-white">
+            View Type:
+          </label>
+          <select
+            value={viewType}
+            onChange={(e) => setViewType(e.target.value)}
+            className="p-2 border rounded bg-white dark:bg-gray-700 dark:text-white"
+          >
+            <option value="day">Day</option>
+            <option value="month">Month</option>
+            <option value="year">Year</option>
+          </select>
+        </div>
+        
         <DatePicker
           selected={selectedDate}
           onChange={(date) => setSelectedDate(date)}
@@ -201,11 +223,21 @@ export default function DashboardClient({ salesData, productsData }) {
           }
           showMonthYearPicker={viewType === "month"}
           showYearPicker={viewType === "year"}
-          className="md:p-2 p-0.5 border rounded md:w-32 w-24 bg-white dark:bg-gray-700 dark:text-white md:text-lg text-xs"
+          className="p-2 border rounded bg-white dark:bg-gray-700 dark:text-white"
         />
+        
+        {session.user.role === "admin" && (
+          <Button
+            onClick={generateSalesReport}
+            className="ml-auto bg-green-600 hover:bg-green-700"
+            disabled={generatingReport}
+          >
+            {generatingReport ? <LoadingSpinner size="sm" /> : "Download Report"}
+          </Button>
+        )}
       </div>
 
-      <p className="mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+      <p className="mb-4 text-gray-900 dark:text-white">
         Showing data for{" "}
         {viewType === "day"
           ? selectedDate.toLocaleDateString()
@@ -220,7 +252,7 @@ export default function DashboardClient({ salesData, productsData }) {
       {session.user.role === "admin" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
               {viewType === "day"
                 ? "Hourly"
                 : viewType === "month"
@@ -229,7 +261,7 @@ export default function DashboardClient({ salesData, productsData }) {
               Sales and Profit
             </h2>
             {chartData.length > 0 ? (
-              <div className="w-full md:h-[400px] h-[300px]">
+              <div className="w-full h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
                     <CartesianGrid
@@ -256,11 +288,11 @@ export default function DashboardClient({ salesData, productsData }) {
             )}
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
+            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
               Sales by Category
             </h2>
             {salesByCategory.length > 0 ? (
-              <div className="w-full md:h-[400px] h-[300px]">
+              <div className="w-full h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -294,43 +326,41 @@ export default function DashboardClient({ salesData, productsData }) {
       )}
 
       {session.user.role !== "admin" && (
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
-              Your{" "}
-              {viewType === "day"
-                ? "Hourly"
-                : viewType === "month"
-                ? "Daily"
-                : "Monthly"}{" "}
-              Sales
-            </h2>
-            {chartData.length > 0 ? (
-              <div className="w-full md:h-[400px] h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={chartColors.grid}
-                    />
-                    <XAxis dataKey="time" tick={{ fill: chartColors.text }} />
-                    <YAxis tick={{ fill: chartColors.text }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar
-                      dataKey="revenue"
-                      fill={chartColors.bar}
-                      name="Revenue"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="text-gray-900 dark:text-white">
-                No sales data for this period.
-              </p>
-            )}
-          </div>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-8">
+          <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
+            Your{" "}
+            {viewType === "day"
+              ? "Hourly"
+              : viewType === "month"
+              ? "Daily"
+              : "Monthly"}{" "}
+            Sales
+          </h2>
+          {chartData.length > 0 ? (
+            <div className="w-full h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={chartColors.grid}
+                  />
+                  <XAxis dataKey="time" tick={{ fill: chartColors.text }} />
+                  <YAxis tick={{ fill: chartColors.text }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar
+                    dataKey="revenue"
+                    fill={chartColors.bar}
+                    name="Revenue"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-gray-900 dark:text-white">
+              No sales data for this period.
+            </p>
+          )}
         </div>
       )}
 

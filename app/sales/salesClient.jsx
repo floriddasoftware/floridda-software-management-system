@@ -32,16 +32,23 @@ export default function SalesClient({ initialProducts }) {
     const unsubscribe = onSnapshot(
       collection(db, "products"),
       (snapshot) => {
-        const productsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const productsData = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const convertedData = {};
+          Object.entries(data).forEach(([key, value]) => {
+            if (value && typeof value === 'object' && 'toDate' in value) {
+              convertedData[key] = value.toDate().toISOString();
+            } else {
+              convertedData[key] = value;
+            }
+          });
+          return { id: doc.id, ...convertedData };
+        });
         setProducts(productsData);
       },
       (err) => {
-        toast.error("Failed to update products in real-time. Using initial data.");
-        setError("Failed to update products in real-time.");
-        // Keep initialProducts as fallback
+        toast.error("Failed to update products in real-time.");
+        console.error("Realtime update error:", err);
       }
     );
     return () => unsubscribe();

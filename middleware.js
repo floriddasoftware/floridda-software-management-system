@@ -4,10 +4,12 @@ export async function middleware(request) {
   const path = request.nextUrl.pathname;
 
   const protectedRoutes = {
-    "/dashboard": ["admin", "salesperson"], 
+    "/dashboard": ["admin", "salesperson"],
     "/products": ["admin"],
     "/sales": ["admin", "salesperson"],
     "/add": ["admin"],
+    "/profile": ["admin", "salesperson"],
+    "/settings": ["admin"],
   };
 
   if (path === "/unauthorized" || path === "/login") {
@@ -51,5 +53,7 @@ export const config = {
     "/products/:path*",
     "/sales/:path*",
     "/add/:path*",
+    "/profile/:path*",
+    "/settings/:path*",
   ],
 };

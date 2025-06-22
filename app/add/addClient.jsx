@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db } from "@/lib/firebaseConfig";
-import { collection, addDoc, deleteDoc, doc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Table from "@/components/Table";
@@ -11,16 +11,41 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useSession } from "next-auth/react";
 import { useSearch } from "@/context/SearchContext";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
-export default function AddClient({ initialSalespersons }) {
+export default function AddClient() {
   const { data: session } = useSession();
   const { searchTerm } = useSearch();
-  const [salespersons, setSalespersons] = useState(initialSalespersons || []);
+  const [salespersons, setSalespersons] = useState([]);
   const [formData, setFormData] = useState({ email: "", name: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [salespersonToDelete, setSalespersonToDelete] = useState(null);
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    if (!session) return;
+    
+    const q = query(collection(db, "users"), where("role", "==", "salesperson"));
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const updatedSalespersons = [];
+        querySnapshot.forEach((doc) => {
+          updatedSalespersons.push({ id: doc.id, ...doc.data() });
+        });
+        setSalespersons(updatedSalespersons);
+        setLoadingData(false);
+      },
+      (error) => {
+        toast.error("Failed to load salespersons: " + error.message);
+        setLoadingData(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [session]);
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -59,7 +84,6 @@ export default function AddClient({ initialSalespersons }) {
       }
 
       const docRef = await addDoc(collection(db, "users"), newSalesperson);
-      setSalespersons([...salespersons, { id: docRef.id, ...newSalesperson }]);
       toast.success("Salesperson added successfully!");
       setFormData({ email: "", name: "", phone: "" });
       setShowAddModal(false);
@@ -92,9 +116,6 @@ export default function AddClient({ initialSalespersons }) {
     setLoading(true);
     try {
       await deleteDoc(doc(db, "users", salespersonToDelete.id));
-      setSalespersons(
-        salespersons.filter((s) => s.id !== salespersonToDelete.id)
-      );
       toast.success("Salesperson deleted successfully!");
     } catch (error) {
       toast.error("Failed to delete salesperson");
@@ -136,7 +157,11 @@ export default function AddClient({ initialSalespersons }) {
         </Button>
       </div>
 
-      {filteredSalespersons.length > 0 ? (
+      {loadingData ? (
+        <div className="flex justify-center py-8">
+          <LoadingSpinner size="md" />
+        </div>
+      ) : filteredSalespersons.length > 0 ? (
         <Table columns={columns} data={filteredSalespersons} actions={actions} />
       ) : (
         <p className="text-gray-900 dark:text-white">
@@ -179,7 +204,7 @@ export default function AddClient({ initialSalespersons }) {
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Salesperson"}
+              {loading ? <LoadingSpinner size="sm" /> : "Add Salesperson"}
             </Button>
           </div>
         </form>
@@ -205,7 +230,7 @@ export default function AddClient({ initialSalespersons }) {
             className="bg-red-600 hover:bg-red-700"
             disabled={loading}
           >
-            {loading ? "Removing..." : "Remove"}
+            {loading ? <LoadingSpinner size="sm" /> : "Remove"}
           </Button>
         </div>
       </Modal>

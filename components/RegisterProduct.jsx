@@ -1,12 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebaseConfig";
+import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function RegisterProduct({
   productToEdit,
@@ -26,7 +28,10 @@ export default function RegisterProduct({
     category: "",
     subCategory: "",
     description: "",
+    imageUrl: "",
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +51,11 @@ export default function RegisterProduct({
         category: productToEdit.category || "",
         subCategory: productToEdit.subCategory || "",
         description: productToEdit.description || "",
+        imageUrl: productToEdit.imageUrl || "",
       });
+      if (productToEdit.imageUrl) {
+        setImagePreview(productToEdit.imageUrl);
+      }
     } else {
       setFormData({
         item: "",
@@ -60,9 +69,32 @@ export default function RegisterProduct({
         category: "",
         subCategory: "",
         description: "",
+        imageUrl: "",
       });
+      setImagePreview(null);
     }
   }, [productToEdit]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    
+    try {
+      const storageRef = ref(storage, `products/${Date.now()}_${imageFile.name}`);
+      await uploadBytes(storageRef, imageFile);
+      return await getDownloadURL(storageRef);
+    } catch (error) {
+      toast.error("Failed to upload image");
+      return null;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,6 +141,11 @@ export default function RegisterProduct({
     }
 
     try {
+      let imageUrl = formData.imageUrl;
+      if (imageFile) {
+        imageUrl = await uploadImage();
+      }
+
       const timestamp = new Date().toISOString();
       const productData = {
         item: formData.item.trim(),
@@ -125,6 +162,7 @@ export default function RegisterProduct({
         owner: session?.user?.email || "",
         createdAt: isEditing ? productToEdit.createdAt : timestamp,
         updatedAt: timestamp,
+        imageUrl: imageUrl || "",
       };
 
       let savedProduct;
@@ -260,6 +298,41 @@ export default function RegisterProduct({
         </div>
         <div className="md:col-span-2 space-y-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Product Image
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="mt-1 block w-full text-sm text-gray-500
+              file:mr-4 file:py-2 file:px-4
+              file:rounded file:border-0
+              file:text-sm file:font-semibold
+              file:bg-blue-50 file:text-blue-700
+              hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-100"
+            disabled={loading}
+          />
+          {imagePreview && (
+            <div className="mt-2">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="h-32 w-32 object-contain border rounded"
+              />
+            </div>
+          )}
+          {!imagePreview && formData.imageUrl && (
+            <div className="mt-2">
+              <img 
+                src={formData.imageUrl} 
+                alt="Current" 
+                className="h-32 w-32 object-contain border rounded"
+              />
+            </div>
+          )}
+        </div>
+        <div className="md:col-span-2 space-y-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Description
             <textarea
               name="description"
@@ -272,7 +345,7 @@ export default function RegisterProduct({
           </label>
         </div>
         {error && (
-          <p className="md:col-span-2 text-red-500 text-sm bg-red-100 p-2 rounded">
+          <p className="md:col-span-2 text-red-500 text-sm bg-red-100 p-2 rounded dark:bg-red-900 dark:text-red-100">
             {error}
           </p>
         )}
@@ -281,7 +354,7 @@ export default function RegisterProduct({
             Cancel
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : isEditing ? "Save" : "Register"}
+            {loading ? <LoadingSpinner size="sm" /> : isEditing ? "Save" : "Register"}
           </Button>
         </div>
       </form>

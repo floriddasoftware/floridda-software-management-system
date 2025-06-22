@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeContext";
 import AuthProvider from "@/components/AuthProvider";
 import { SearchProvider } from "@/context/SearchContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,11 +15,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
-  title: "Floridda Software Management System",
-  description: "Managing Inventory and Sales",
-};
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
@@ -27,7 +23,11 @@ export default function RootLayout({ children }) {
       >
         <AuthProvider>
           <ThemeProvider>
-            <SearchProvider>{children}</SearchProvider>
+            <SearchProvider>
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+            </SearchProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

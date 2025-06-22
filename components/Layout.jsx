@@ -36,7 +36,9 @@ export default function Layout({ children }) {
           isCollapsed={isCollapsed}
           toggleCollapse={toggleCollapse}
         />
-        <main className="flex-1 h-full overflow-y-auto p-6 lg:ml-40">
+        <main className={`flex-1 h-full overflow-y-auto p-6 ml-3 ${
+          isCollapsed ? "lg:ml-10" : "lg:ml-40"
+        }`}>
           {children}
         </main>
       </div>
