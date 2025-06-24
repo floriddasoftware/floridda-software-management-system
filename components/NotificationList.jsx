@@ -29,7 +29,6 @@ export default function NotificationList({ onClose }) {
             querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
           );
         } catch (error) {
-          // Silently handle error
         }
       };
       fetchNotifications();
