@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
@@ -10,11 +10,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-export default function RegisterProduct({
-  productToEdit,
-  onClose,
-  onSaveComplete,
-}) {
+export default function RegisterProduct({ productToEdit, onClose, onSaveComplete }) {
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
     item: "",
@@ -53,9 +49,7 @@ export default function RegisterProduct({
         description: productToEdit.description || "",
         imageUrl: productToEdit.imageUrl || "",
       });
-      if (productToEdit.imageUrl) {
-        setImagePreview(productToEdit.imageUrl);
-      }
+      setImagePreview(productToEdit.imageUrl || null);
     } else {
       setFormData({
         item: "",
@@ -73,6 +67,7 @@ export default function RegisterProduct({
       });
       setImagePreview(null);
     }
+    setImageFile(null);
   }, [productToEdit]);
 
   const handleImageChange = (e) => {
@@ -83,21 +78,33 @@ export default function RegisterProduct({
     }
   };
 
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData({ ...formData, imageUrl: "" });
+  };
+
   const uploadImage = async () => {
-    if (!imageFile) return null;
-    
+    if (!imageFile) return formData.imageUrl || "";
     try {
       const storageRef = ref(storage, `products/${Date.now()}_${imageFile.name}`);
-      await uploadBytes(storageRef, imageFile);
-      return await getDownloadURL(storageRef);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      const url = await getDownloadURL(snapshot.ref);
+      return url;
     } catch (error) {
-      toast.error("Failed to upload image");
-      return null;
+      toast.error("Failed to upload image: " + error.message);
+      throw error;
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!session || session.user.role !== "admin") {
+      setError("Only admins can register/edit products.");
+      toast.error("Only admins can register/edit products.");
+      return;
+    }
+
     setError("");
     setLoading(true);
 
@@ -121,9 +128,9 @@ export default function RegisterProduct({
       return;
     }
 
-    if (quantity <= 0) {
-      setError("Quantity must be a positive number.");
-      toast.error("Quantity must be a positive number.");
+    if (quantity < 0) {
+      setError("Quantity cannot be negative.");
+      toast.error("Quantity cannot be negative.");
       setLoading(false);
       return;
     }
@@ -144,6 +151,10 @@ export default function RegisterProduct({
       let imageUrl = formData.imageUrl;
       if (imageFile) {
         imageUrl = await uploadImage();
+      } else if (!imagePreview && isEditing && productToEdit.imageUrl) {
+        const imageRef = ref(storage, productToEdit.imageUrl);
+        await deleteObject(imageRef);
+        imageUrl = "";
       }
 
       const timestamp = new Date().toISOString();
@@ -159,10 +170,11 @@ export default function RegisterProduct({
         category: formData.category.trim(),
         subCategory: formData.subCategory.trim(),
         description: formData.description.trim(),
-        owner: session?.user?.email || "",
+        owner: session.user.email,
         createdAt: isEditing ? productToEdit.createdAt : timestamp,
         updatedAt: timestamp,
-        imageUrl: imageUrl || "",
+        imageUrl,
+        status: quantity === 0 ? "out of stock" : "active",
       };
 
       let savedProduct;
@@ -174,19 +186,11 @@ export default function RegisterProduct({
         savedProduct = { id: docRef.id, ...productData };
       }
 
-      if (quantity < 5 && session?.user?.email) {
-        await addDoc(collection(db, "notifications"), {
-          userId: session.user.email,
-          message: `${formData.item} is low on stock (${quantity} left)`,
-          read: false,
-          timestamp: new Date().toISOString(),
-        });
-      }
       toast.success("Product saved successfully!");
       onSaveComplete(savedProduct);
     } catch (err) {
-      setError("Failed to save product. Please try again.");
-      toast.error("Failed to save product. Please try again.");
+      setError("Failed to save product: " + err.message);
+      toast.error("Failed to save product: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -197,15 +201,8 @@ export default function RegisterProduct({
   };
 
   return (
-    <Modal
-      isOpen={true}
-      onClose={onClose}
-      title={isEditing ? "Edit Product" : "Register New Product"}
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-      >
+    <Modal isOpen={true} onClose={onClose} title={isEditing ? "Edit Product" : "Register New Product"}>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-4">
           <FormField
             label="Item Name"
@@ -223,7 +220,7 @@ export default function RegisterProduct({
             onChange={handleChange}
             required
             disabled={loading}
-            min="1"
+            min="0"
           />
           <FormField
             label="Cost Price per Unit"
@@ -304,30 +301,24 @@ export default function RegisterProduct({
             type="file"
             accept="image/*"
             onChange={handleImageChange}
-            className="mt-1 block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded file:border-0
-              file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700
-              hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-100"
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-100"
             disabled={loading}
           />
           {imagePreview && (
-            <div className="mt-2">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
+            <div className="mt-2 relative">
+              <img
+                src={imagePreview}
+                alt="Preview"
                 className="h-32 w-32 object-contain border rounded"
               />
-            </div>
-          )}
-          {!imagePreview && formData.imageUrl && (
-            <div className="mt-2">
-              <img 
-                src={formData.imageUrl} 
-                alt="Current" 
-                className="h-32 w-32 object-contain border rounded"
-              />
+              <button
+                type="button"
+                onClick={removeImage}
+                className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1"
+                disabled={loading}
+              >
+                ✕
+              </button>
             </div>
           )}
         </div>
@@ -339,7 +330,7 @@ export default function RegisterProduct({
               value={formData.description}
               onChange={handleChange}
               rows={3}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               disabled={loading}
             />
           </label>

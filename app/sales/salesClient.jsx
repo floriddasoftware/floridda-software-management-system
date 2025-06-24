@@ -7,6 +7,7 @@ import {
   updateDoc,
   doc,
   addDoc,
+  getDocs,
   deleteDoc,
 } from "firebase/firestore";
 import { useSession } from "next-auth/react";
@@ -16,140 +17,150 @@ import Button from "@/components/Button";
 import { useSearch } from "@/context/SearchContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Select from "react-select";
 
 export default function SalesClient({ initialProducts }) {
   const { data: session } = useSession();
   const [products, setProducts] = useState(initialProducts || []);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [sellQuantity, setSellQuantity] = useState("");
+  const [salesHistory, setSalesHistory] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [sellQuantities, setSellQuantities] = useState({});
+  const [filterDateStart, setFilterDateStart] = useState(null);
+  const [filterDateEnd, setFilterDateEnd] = useState(null);
   const [showSellModal, setShowSellModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { searchTerm } = useSearch();
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    const unsubscribeProducts = onSnapshot(
       collection(db, "products"),
       (snapshot) => {
-        const productsData = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          const convertedData = {};
-          Object.entries(data).forEach(([key, value]) => {
-            if (value && typeof value === 'object' && 'toDate' in value) {
-              convertedData[key] = value.toDate().toISOString();
-            } else {
-              convertedData[key] = value;
-            }
-          });
-          return { id: doc.id, ...convertedData };
-        });
+        const productsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setProducts(productsData);
       },
       (err) => {
-        toast.error("Failed to update products in real-time.");
-        console.error("Realtime update error:", err);
+        toast.error("Failed to update products.");
       }
     );
-    return () => unsubscribe();
-  }, [initialProducts]);
+    return () => unsubscribeProducts();
+  }, []);
 
-  const filteredProducts = products.filter((product) =>
-    product.item.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSell = (product) => {
-    setSelectedProduct(product);
-    setSellQuantity("");
-    setShowSellModal(true);
-    setError("");
+  const fetchSalesHistory = async () => {
+    try {
+      const salesSnapshot = await getDocs(collection(db, "sales"));
+      const salesData = salesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setSalesHistory(salesData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+    } catch (err) {
+      toast.error("Failed to fetch sales history.");
+    }
   };
 
-  const confirmSell = async () => {
-    if (!selectedProduct || !sellQuantity) {
-      setError("Please enter a valid quantity.");
-      toast.error("Please enter a valid quantity.");
-      return;
-    }
+  const handleProductSelect = (selectedOptions) => {
+    setSelectedProducts(selectedOptions ? selectedOptions.map((option) => option.value) : []);
+  };
 
-    const quantityToSell = parseInt(sellQuantity, 10);
-    if (isNaN(quantityToSell) || quantityToSell <= 0) {
-      setError("Quantity must be a positive number.");
-      toast.error("Quantity must be a positive number.");
-      return;
-    }
+  const handleQuantityChange = (productId, value) => {
+    setSellQuantities({
+      ...sellQuantities,
+      [productId]: value,
+    });
+  };
 
+  const confirmMultipleSell = async (e) => {
+    e.preventDefault();
     if (!session) {
-      setError("Authentication required");
-      toast.error("Authentication required");
+      setError("Authentication required.");
+      toast.error("Authentication required.");
       return;
     }
-
-    if (quantityToSell > selectedProduct.quantity) {
-      setError("Cannot sell more than available quantity!");
-      toast.error("Cannot sell more than available quantity!");
+    if (selectedProducts.length === 0) {
+      setError("Please select at least one product.");
+      toast.error("Please select at least one product.");
       return;
     }
 
     setLoading(true);
     try {
-      const newQuantity = selectedProduct.quantity - quantityToSell;
+      for (const productId of selectedProducts) {
+        const product = products.find((p) => p.id === productId);
+        const quantityToSell = parseInt(sellQuantities[productId] || "0", 10);
 
-      if (newQuantity > 0) {
-        await updateDoc(doc(db, "products", selectedProduct.id), {
-          quantity: newQuantity,
-        });
-      } else {
-        await deleteDoc(doc(db, "products", selectedProduct.id));
-        if (session?.user?.email) {
+        if (isNaN(quantityToSell) || quantityToSell <= 0) {
+          throw new Error(`Invalid quantity for ${product.item}.`);
+        }
+        if (quantityToSell > product.quantity) {
+          throw new Error(`Cannot sell more than available quantity for ${product.item}.`);
+        }
+
+        const newQuantity = product.quantity - quantityToSell;
+        const saleData = {
+          productId: product.id,
+          item: product.item,
+          quantity: quantityToSell,
+          salePrice: product.salePrice,
+          costPrice: product.costPrice,
+          totalAmount: quantityToSell * product.salePrice,
+          salespersonId: session.user.email,
+          timestamp: new Date().toISOString(),
+          modelNumber: product.modelNumber,
+        };
+
+        if (newQuantity === 0) {
+          await deleteDoc(doc(db, "products", product.id));
+        } else {
+          await updateDoc(doc(db, "products", product.id), {
+            quantity: newQuantity,
+            status: newQuantity === 0 ? "out of stock" : "active",
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        await addDoc(collection(db, "sales"), saleData);
+
+        if (newQuantity < 5 && newQuantity > 0 && session.user.role === "admin") {
           await addDoc(collection(db, "notifications"), {
             userId: session.user.email,
-            message: `${selectedProduct.item} has been sold out and removed from inventory.`,
+            message: `${product.item} is low on stock (${newQuantity} left)`,
             read: false,
             timestamp: new Date().toISOString(),
           });
         }
       }
 
-      await addDoc(collection(db, "sales"), {
-        productId: selectedProduct.id,
-        item: selectedProduct.item,
-        quantity: quantityToSell,
-        salePrice: selectedProduct.salePrice,
-        costPrice: selectedProduct.costPrice,
-        totalAmount: quantityToSell * selectedProduct.salePrice,
-        salespersonId: session.user.email,
-        timestamp: new Date().toISOString(),
-      });
-
-      if (newQuantity < 5 && newQuantity > 0 && session?.user?.email) {
-        await addDoc(collection(db, "notifications"), {
-          userId: session.user.email,
-          message: `${selectedProduct.item} is low on stock (${newQuantity} left)`,
-          read: false,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      toast.success("Sale processed successfully!");
+      toast.success("Sales processed successfully!");
       setShowSellModal(false);
-      setSelectedProduct(null);
-      setSellQuantity("");
+      setSelectedProducts([]);
+      setSellQuantities({});
     } catch (error) {
-      setError("Failed to process sale. Please try again.");
-      toast.error("Failed to process sale.");
+      setError(error.message || "Failed to process sales.");
+      toast.error(error.message || "Failed to process sales.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleView = (product) => {
-    setSelectedProduct(product);
-    setShowViewModal(true);
-    setError("");
-  };
+  const productOptions = products.map((product) => ({
+    value: product.id,
+    label: `${product.item} (Qty: ${product.quantity})`,
+  }));
 
-  const columns = [
+  const filteredSales = salesHistory.filter((sale) => {
+    const saleDate = new Date(sale.timestamp);
+    if (filterDateStart && filterDateEnd) {
+      return saleDate >= filterDateStart && saleDate <= filterDateEnd;
+    }
+    return true;
+  });
+
+  const productColumns = [
     { key: "item", label: "Item" },
     { key: "quantity", label: "Quantity" },
     { key: "salePrice", label: "Sale Price" },
@@ -157,119 +168,105 @@ export default function SalesClient({ initialProducts }) {
     { key: "serialNumber", label: "Serial" },
     { key: "category", label: "Category" },
     { key: "subCategory", label: "Sub Category" },
+    { key: "status", label: "Status" },
   ];
 
-  const actions = [
-    { label: "Sell", onClick: handleSell },
-    { label: "View", onClick: handleView },
+  const salesColumns = [
+    { key: "item", label: "Item" },
+    { key: "quantity", label: "Quantity" },
+    { key: "salePrice", label: "Sale Price" },
+    { key: "totalAmount", label: "Total Amount" },
+    { key: "salespersonId", label: "Salesperson" },
+    { key: "timestamp", label: "Date", render: (value) => new Date(value).toLocaleString() },
   ];
+
+  const filteredProducts = products.filter((product) =>
+    product.item.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container mx-auto p-4">
       <ToastContainer />
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        Sales
-      </h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Sales</h1>
+      <div className="flex justify-between mb-4">
+        <Button onClick={() => setShowSellModal(true)}>Make Sales</Button>
+        <Button onClick={() => { fetchSalesHistory(); setShowHistoryModal(true); }}>
+          View Sales History
+        </Button>
+      </div>
       {error && (
         <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
       )}
       {filteredProducts.length > 0 ? (
-        <Table columns={columns} data={filteredProducts} actions={actions} />
+        <Table columns={productColumns} data={filteredProducts} />
       ) : (
         <p className="text-gray-900 dark:text-white">No products found.</p>
       )}
 
-      <Modal
-        isOpen={showSellModal}
-        onClose={() => setShowSellModal(false)}
-        title="Sell Product"
-      >
-        <p className="mb-4 text-gray-700 dark:text-gray-300">
-          Enter quantity to sell for {selectedProduct?.item}:
-        </p>
-        <input
-          type="number"
-          value={sellQuantity}
-          onChange={(e) => setSellQuantity(e.target.value)}
-          className="mb-4 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          min="1"
-          max={selectedProduct?.quantity}
-          disabled={loading}
-        />
-        {error && (
-          <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
-        )}
-        <div className="flex justify-end space-x-2">
-          <Button onClick={() => setShowSellModal(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={confirmSell} disabled={loading}>
-            {loading ? "Processing..." : "Sell"}
-          </Button>
-        </div>
+      <Modal isOpen={showSellModal} onClose={() => setShowSellModal(false)} title="Make Sale">
+        <form onSubmit={confirmMultipleSell} className="space-y-4">
+          <Select
+            isMulti
+            options={productOptions}
+            onChange={handleProductSelect}
+            placeholder="Search and select products..."
+            className="dark:text-black"
+            isDisabled={loading}
+          />
+          {selectedProducts.map((productId) => {
+            const product = products.find((p) => p.id === productId);
+            return (
+              <div key={productId} className="flex items-center space-x-2">
+                <span className="text-gray-900 dark:text-white">{product.item}</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={product.quantity}
+                  value={sellQuantities[productId] || ""}
+                  onChange={(e) => handleQuantityChange(productId, e.target.value)}
+                  className="w-20 p-1 border rounded dark:bg-gray-700 dark:text-white"
+                  placeholder="Qty"
+                  disabled={loading}
+                />
+              </div>
+            );
+          })}
+          {error && (
+            <p className="text-red-500 bg-red-100 p-2 rounded">{error}</p>
+          )}
+          <div className="flex justify-end space-x-2">
+            <Button onClick={() => setShowSellModal(false)} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Processing..." : "Sell Selected"}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
-      <Modal
-        isOpen={showViewModal}
-        onClose={() => setShowViewModal(false)}
-        title="Product Details"
-      >
-        {selectedProduct && (
-          <div className="text-gray-700 dark:text-gray-300">
-            <p>
-              <strong>Item:</strong> {selectedProduct.item}
-            </p>
-            <p>
-              <strong>Quantity:</strong> {selectedProduct.quantity}
-            </p>
-            {session?.user?.role === "admin" && (
-              <p>
-                <strong>Cost Price per Unit:</strong>{" "}
-                {selectedProduct.costPrice}
-              </p>
-            )}
-            <p>
-              <strong>Sale Price per Unit:</strong> {selectedProduct.salePrice}
-            </p>
-            <p>
-              <strong>Model Number:</strong> {selectedProduct.modelNumber}
-            </p>
-            <p>
-              <strong>Serial Number:</strong> {selectedProduct.serialNumber}
-            </p>
-            <p>
-              <strong>Category:</strong> {selectedProduct.category}
-            </p>
-            <p>
-              <strong>Sub Category:</strong> {selectedProduct.subCategory}
-            </p>
-            <p>
-              <strong>Color:</strong> {selectedProduct.color || "N/A"}
-            </p>
-            <p>
-              <strong>Storage:</strong> {selectedProduct.storage || "N/A"}
-            </p>
-            <p>
-              <strong>Description:</strong>{" "}
-              {selectedProduct.description || "N/A"}
-            </p>
-            <p>
-              <strong>Created At:</strong>{" "}
-              {selectedProduct.createdAt
-                ? new Date(selectedProduct.createdAt).toLocaleString()
-                : "N/A"}
-            </p>
-            <p>
-              <strong>Updated At:</strong>{" "}
-              {selectedProduct.updatedAt
-                ? new Date(selectedProduct.updatedAt).toLocaleString()
-                : "N/A"}
-            </p>
-          </div>
-        )}
-        <div className="flex justify-end mt-4">
-          <Button onClick={() => setShowViewModal(false)}>Close</Button>
+      <Modal isOpen={showHistoryModal} onClose={() => setShowHistoryModal(false)} title="Sales History">
+        <div className="flex space-x-4 mb-4">
+          <input
+            type="date"
+            onChange={(e) => setFilterDateStart(e.target.value ? new Date(e.target.value) : null)}
+            className="p-2 border rounded dark:bg-gray-700 dark:text-white"
+            placeholder="Start Date"
+          />
+          <input
+            type="date"
+            onChange={(e) => setFilterDateEnd(e.target.value ? new Date(e.target.value) : null)}
+            className="p-2 border rounded dark:bg-gray-700 dark:text-white"
+            placeholder="End Date"
+          />
         </div>
+        {filterDateStart && filteredSales.length > 0 ? (
+          <Table columns={salesColumns} data={filteredSales} />
+        ) : (
+          <p className="text-gray-900 dark:text-white">
+            {filterDateStart ? "No sales found for this date range." : "Please select a date range."}
+          </p>
+        )}
       </Modal>
     </div>
   );

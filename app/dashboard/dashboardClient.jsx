@@ -18,15 +18,19 @@ import {
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useTheme } from "@/components/ThemeContext";
-import { utils, writeFile } from 'xlsx-js-style';
-import { saveAs } from 'file-saver';
+import { db } from "@/lib/firebaseConfig";
+import { collection, onSnapshot } from "firebase/firestore";
+import { utils, writeFile } from "xlsx-js-style";
 import Button from "@/components/Button";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "react-toastify";
 
-export default function DashboardClient({ salesData, productsData }) {
+export default function DashboardClient({ initialSalesData, initialProductsData }) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { isDarkMode } = useTheme();
+  const [salesData, setSalesData] = useState(initialSalesData || []);
+  const [productsData, setProductsData] = useState(initialProductsData || []);
   const [viewType, setViewType] = useState("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -34,7 +38,35 @@ export default function DashboardClient({ salesData, productsData }) {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
+      return;
     }
+
+    const unsubscribeSales = onSnapshot(
+      collection(db, "sales"),
+      (snapshot) => {
+        const sales = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setSalesData(sales);
+      },
+      (error) => {
+        toast.error("Failed to load sales data.");
+      }
+    );
+
+    const unsubscribeProducts = onSnapshot(
+      collection(db, "products"),
+      (snapshot) => {
+        const products = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setProductsData(products);
+      },
+      (error) => {
+        toast.error("Failed to load products data.");
+      }
+    );
+
+    return () => {
+      unsubscribeSales();
+      unsubscribeProducts();
+    };
   }, [status, router]);
 
   if (status === "loading") {
@@ -45,9 +77,7 @@ export default function DashboardClient({ salesData, productsData }) {
     );
   }
 
-  if (status === "unauthenticated") {
-    return null;
-  }
+  if (status === "unauthenticated") return null;
 
   const chartColors = {
     text: isDarkMode ? "#fff" : "#000",
@@ -105,16 +135,10 @@ export default function DashboardClient({ salesData, productsData }) {
     }));
     if (viewType === "day" || viewType === "month") {
       return chartData.sort((a, b) => parseInt(a.time) - parseInt(b.time));
-    } else if (viewType === "year") {
-      const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-      ];
-      return chartData.sort(
-        (a, b) => months.indexOf(a.time) - months.indexOf(b.time)
-      );
+    } else {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return chartData.sort((a, b) => months.indexOf(a.time) - months.indexOf(b.time));
     }
-    return chartData;
   };
 
   const getSalesByCategory = (sales, products) => {
@@ -127,16 +151,13 @@ export default function DashboardClient({ salesData, productsData }) {
       acc[category] = (acc[category] || 0) + Number(sale.totalAmount || 0);
       return acc;
     }, {});
-    return Object.entries(salesByCategory).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    return Object.entries(salesByCategory).map(([name, value]) => ({ name, value }));
   };
 
   const generateSalesReport = () => {
     setGeneratingReport(true);
     try {
-      const reportData = filteredSales.map(sale => ({
+      const reportData = filteredSales.map((sale) => ({
         Date: new Date(sale.timestamp).toLocaleString(),
         Product: sale.item,
         Quantity: sale.quantity,
@@ -144,14 +165,12 @@ export default function DashboardClient({ salesData, productsData }) {
         "Total Amount": sale.totalAmount,
         "Salesperson": sale.salespersonId,
       }));
-  
       const worksheet = utils.json_to_sheet(reportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Sales Report");
-      writeFile(workbook, `sales-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+      writeFile(workbook, `sales-report-${new Date().toISOString().split("T")[0]}.xlsx`);
     } catch (error) {
-      console.error("Failed to generate report:", error);
-      toast.error("Failed to generate report");
+      toast.error("Failed to generate report.");
     } finally {
       setGeneratingReport(false);
     }
@@ -162,15 +181,9 @@ export default function DashboardClient({ salesData, productsData }) {
       ? salesData.filter((sale) => sale.salespersonId === session.user.email)
       : salesData;
   const filteredSales = filterSales(userSales, viewType, selectedDate);
-  const chartData = groupSales(
-    filteredSales,
-    viewType,
-    session.user.role === "admin"
-  );
+  const chartData = groupSales(filteredSales, viewType, session.user.role === "admin");
   const salesByCategory =
-    session.user.role === "admin"
-      ? getSalesByCategory(filteredSales, productsData)
-      : [];
+    session.user.role === "admin" ? getSalesByCategory(filteredSales, productsData) : [];
 
   const totalRevenue = filteredSales.reduce(
     (sum, sale) => sum + Number(sale.totalAmount || 0),
@@ -180,9 +193,7 @@ export default function DashboardClient({ salesData, productsData }) {
     session.user.role === "admin"
       ? filteredSales.reduce(
           (sum, sale) =>
-            sum +
-            (Number(sale.totalAmount || 0) -
-              Number(sale.quantity || 0) * Number(sale.costPrice || 0)),
+            sum + (Number(sale.totalAmount || 0) - Number(sale.quantity || 0) * Number(sale.costPrice || 0)),
           0
         )
       : 0;
@@ -197,9 +208,7 @@ export default function DashboardClient({ salesData, productsData }) {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center">
-          <label className="mr-2 text-gray-900 dark:text-white">
-            View Type:
-          </label>
+          <label className="mr-2 text-gray-900 dark:text-white">View Type:</label>
           <select
             value={viewType}
             onChange={(e) => setViewType(e.target.value)}
@@ -210,22 +219,14 @@ export default function DashboardClient({ salesData, productsData }) {
             <option value="year">Year</option>
           </select>
         </div>
-        
         <DatePicker
           selected={selectedDate}
           onChange={(date) => setSelectedDate(date)}
-          dateFormat={
-            viewType === "day"
-              ? "yyyy/MM/dd"
-              : viewType === "month"
-              ? "yyyy/MM"
-              : "yyyy"
-          }
+          dateFormat={viewType === "day" ? "yyyy/MM/dd" : viewType === "month" ? "yyyy/MM" : "yyyy"}
           showMonthYearPicker={viewType === "month"}
           showYearPicker={viewType === "year"}
           className="p-2 border rounded bg-white dark:bg-gray-700 dark:text-white"
         />
-        
         {session.user.role === "admin" && (
           <Button
             onClick={generateSalesReport}
@@ -242,10 +243,7 @@ export default function DashboardClient({ salesData, productsData }) {
         {viewType === "day"
           ? selectedDate.toLocaleDateString()
           : viewType === "month"
-          ? selectedDate.toLocaleString("default", {
-              month: "long",
-              year: "numeric",
-            })
+          ? selectedDate.toLocaleString("default", { month: "long", year: "numeric" })
           : selectedDate.getFullYear()}
       </p>
 
@@ -253,44 +251,28 @@ export default function DashboardClient({ salesData, productsData }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
-              {viewType === "day"
-                ? "Hourly"
-                : viewType === "month"
-                ? "Daily"
-                : "Monthly"}{" "}
-              Sales and Profit
+              {viewType === "day" ? "Hourly" : viewType === "month" ? "Daily" : "Monthly"} Sales and Profit
             </h2>
             {chartData.length > 0 ? (
               <div className="w-full h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={chartColors.grid}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                     <XAxis dataKey="time" tick={{ fill: chartColors.text }} />
                     <YAxis tick={{ fill: chartColors.text }} />
                     <Tooltip />
                     <Legend />
-                    <Bar
-                      dataKey="revenue"
-                      fill={chartColors.bar}
-                      name="Revenue"
-                    />
+                    <Bar dataKey="revenue" fill={chartColors.bar} name="Revenue" />
                     <Bar dataKey="profit" fill="#82ca9d" name="Profit" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-gray-900 dark:text-white">
-                No sales data for this period.
-              </p>
+              <p className="text-gray-900 dark:text-white">No sales data for this period.</p>
             )}
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
-              Sales by Category
-            </h2>
+            <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">Sales by Category</h2>
             {salesByCategory.length > 0 ? (
               <div className="w-full h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -306,10 +288,7 @@ export default function DashboardClient({ salesData, productsData }) {
                       label
                     >
                       {salesByCategory.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -317,9 +296,7 @@ export default function DashboardClient({ salesData, productsData }) {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-gray-900 dark:text-white">
-                No sales data for this period.
-              </p>
+              <p className="text-gray-900 dark:text-white">No sales data for this period.</p>
             )}
           </div>
         </div>
@@ -328,38 +305,23 @@ export default function DashboardClient({ salesData, productsData }) {
       {session.user.role !== "admin" && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-8">
           <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
-            Your{" "}
-            {viewType === "day"
-              ? "Hourly"
-              : viewType === "month"
-              ? "Daily"
-              : "Monthly"}{" "}
-            Sales
+            Your {viewType === "day" ? "Hourly" : viewType === "month" ? "Daily" : "Monthly"} Sales
           </h2>
           {chartData.length > 0 ? (
             <div className="w-full h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={chartColors.grid}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                   <XAxis dataKey="time" tick={{ fill: chartColors.text }} />
                   <YAxis tick={{ fill: chartColors.text }} />
                   <Tooltip />
                   <Legend />
-                  <Bar
-                    dataKey="revenue"
-                    fill={chartColors.bar}
-                    name="Revenue"
-                  />
+                  <Bar dataKey="revenue" fill={chartColors.bar} name="Revenue" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-gray-900 dark:text-white">
-              No sales data for this period.
-            </p>
+            <p className="text-gray-900 dark:text-white">No sales data for this period.</p>
           )}
         </div>
       )}
@@ -373,9 +335,7 @@ export default function DashboardClient({ salesData, productsData }) {
         </div>
         <div className="bg-green-100 dark:bg-green-900 p-4 rounded-lg">
           <h3 className="text-gray-900 dark:text-white">
-            {session.user.role === "admin"
-              ? "Total Sales Transactions"
-              : "Your Sales Transactions"}
+            {session.user.role === "admin" ? "Total Sales Transactions" : "Your Sales Transactions"}
           </h3>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {filteredSales.length}
@@ -399,9 +359,7 @@ export default function DashboardClient({ salesData, productsData }) {
         )}
         {session.user.role !== "admin" && (
           <div className="bg-purple-100 dark:bg-purple-900 p-4 rounded-lg">
-            <h3 className="text-gray-900 dark:text-white">
-              Your Total Revenue
-            </h3>
+            <h3 className="text-gray-900 dark:text-white">Your Total Revenue</h3>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">
               ₦{totalRevenue.toFixed(2)}
             </p>
