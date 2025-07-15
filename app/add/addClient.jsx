@@ -1,7 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db } from "@/lib/firebaseConfig";
-import { collection, addDoc, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+} from "firebase/firestore";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Table from "@/components/Table";
@@ -20,6 +26,30 @@ export default function AddClient({ initialSalespersons }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [salespersonToDelete, setSalespersonToDelete] = useState(null);
 
+  // Real-time listener for salespeople
+  useEffect(() => {
+    if (session?.user?.role === "admin") {
+      const unsubscribe = onSnapshot(
+        collection(db, "salespeople"),
+        (snapshot) => {
+          const salespersonsData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          console.log("Real-time salespersons:", salespersonsData);
+          setSalespersons(salespersonsData);
+        },
+        (error) => {
+          console.error("Error in real-time listener:", error);
+          toast.error("Failed to fetch salespeople in real-time.");
+        }
+      );
+      return () => unsubscribe();
+    } else {
+      setSalespersons(initialSalespersons || []);
+    }
+  }, [session, initialSalespersons]);
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!session || session.user.role !== "admin") {
@@ -33,13 +63,13 @@ export default function AddClient({ initialSalespersons }) {
         ...formData,
         role: "salesperson",
         addedBy: session.user.email,
+        branchId: "dutse",
       };
 
       const docRef = await addDoc(
         collection(db, "salespeople"),
         newSalesperson
       );
-      setSalespersons([...salespersons, { id: docRef.id, ...newSalesperson }]);
       toast.success("Salesperson added successfully!");
       setFormData({ email: "", name: "", phone: "" });
       setShowAddModal(false);
@@ -73,9 +103,6 @@ export default function AddClient({ initialSalespersons }) {
     setLoading(true);
     try {
       await deleteDoc(doc(db, "salespeople", salespersonToDelete.id));
-      setSalespersons(
-        salespersons.filter((s) => s.id !== salespersonToDelete.id)
-      );
       toast.success("Salesperson deleted successfully!");
     } catch (error) {
       console.error("Error deleting salesperson:", error);
@@ -109,7 +136,7 @@ export default function AddClient({ initialSalespersons }) {
           onClick={() => setShowAddModal(true)}
           disabled={loading || (session && session.user.role !== "admin")}
         >
-          Add
+          Add Salesperson
         </Button>
       </div>
 
@@ -117,7 +144,7 @@ export default function AddClient({ initialSalespersons }) {
         <Table columns={columns} data={salespersons} actions={actions} />
       ) : (
         <p className="text-gray-900 dark:text-white">
-          No salespeople added yet.
+          No salespeople available.
         </p>
       )}
 

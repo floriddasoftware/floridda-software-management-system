@@ -6,6 +6,8 @@ import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function RegisterProduct({
   productToEdit,
@@ -19,7 +21,7 @@ export default function RegisterProduct({
     costPrice: "",
     salePrice: "",
     modelNumber: "",
-    serialNumbers: [], 
+    serialNumbers: [],
     color: "",
     storage: "",
     category: "",
@@ -39,7 +41,7 @@ export default function RegisterProduct({
         costPrice: productToEdit.costPrice || "",
         salePrice: productToEdit.salePrice || "",
         modelNumber: productToEdit.modelNumber || "",
-        serialNumbers: productToEdit.serialNumbers || [], // Load existing serial numbers
+        serialNumbers: productToEdit.serialNumbers || [],
         color: productToEdit.color || "",
         storage: productToEdit.storage || "",
         category: productToEdit.category || "",
@@ -72,7 +74,6 @@ export default function RegisterProduct({
     const costPrice = parseFloat(formData.costPrice);
     const salePrice = parseFloat(formData.salePrice);
 
-    // Validation
     if (
       !formData.item.trim() ||
       isNaN(quantity) ||
@@ -84,24 +85,28 @@ export default function RegisterProduct({
       formData.serialNumbers.length !== quantity
     ) {
       setError(
-        "Please fill in all required fields and provide serial numbers equal to the quantity."
+        "Please fill in all required fields and ensure serial numbers match quantity."
       );
+      toast.error("Invalid input data.");
       setLoading(false);
       return;
     }
 
     if (quantity <= 0) {
       setError("Quantity must be a positive number.");
+      toast.error("Quantity must be positive.");
       setLoading(false);
       return;
     }
     if (costPrice <= 0 || salePrice <= 0) {
       setError("Prices must be positive numbers.");
+      toast.error("Prices must be positive.");
       setLoading(false);
       return;
     }
     if (salePrice < costPrice) {
       setError("Sale Price must be greater than or equal to Cost Price.");
+      toast.error("Sale Price too low.");
       setLoading(false);
       return;
     }
@@ -113,14 +118,14 @@ export default function RegisterProduct({
         costPrice,
         salePrice,
         modelNumber: formData.modelNumber,
-        serialNumbers: formData.serialNumbers, 
+        serialNumbers: formData.serialNumbers,
         color: formData.color,
         storage: formData.storage,
         category: formData.category,
         subCategory: formData.subCategory,
         description: formData.description,
-        owner: session?.user?.id || "",
-        branchId: session?.user?.branchId || "", 
+        owner: session?.user?.email || "",
+        branchId: "dutse", 
       };
 
       let savedProduct;
@@ -132,7 +137,6 @@ export default function RegisterProduct({
         savedProduct = { id: docRef.id, ...productData };
       }
 
-      // Notify if stock is low
       if (quantity < 5 && session?.user?.email) {
         await addDoc(collection(db, "notifications"), {
           userId: session.user.email,
@@ -141,10 +145,12 @@ export default function RegisterProduct({
           timestamp: new Date().toISOString(),
         });
       }
+      toast.success("Product saved successfully!");
       onSaveComplete(savedProduct);
     } catch (err) {
       console.error("Error saving product:", err);
       setError("Failed to save product. Please try again.");
+      toast.error("Failed to save product.");
     } finally {
       setLoading(false);
     }
@@ -155,7 +161,10 @@ export default function RegisterProduct({
   };
 
   const handleSerialNumbersChange = (e) => {
-    const serials = e.target.value.split(",").map((s) => s.trim());
+    const serials = e.target.value
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s);
     setFormData({ ...formData, serialNumbers: serials });
   };
 
@@ -165,6 +174,7 @@ export default function RegisterProduct({
       onClose={onClose}
       title={isEditing ? "Edit Product" : "Register New Product"}
     >
+      <ToastContainer />
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-4"

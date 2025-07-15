@@ -37,32 +37,46 @@ export default function SalesClient({ initialProducts }) {
   useEffect(() => {
     let unsubscribe;
     if (session?.user?.role === "admin") {
-      unsubscribe = onSnapshot(collection(db, "products"), (snapshot) => {
-        const productsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setProducts(productsData);
-      });
+      unsubscribe = onSnapshot(
+        collection(db, "products"),
+        (snapshot) => {
+          const productsData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setProducts(productsData);
+        },
+        (error) => {
+          console.error("Error fetching products:", error);
+          toast.error("Failed to load products.");
+        }
+      );
     } else if (session?.user?.branchId) {
       const q = query(
         collection(db, "products"),
         where("branchId", "==", session.user.branchId)
       );
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const productsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setProducts(productsData);
-      });
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const productsData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setProducts(productsData);
+        },
+        (error) => {
+          console.error("Error fetching products:", error);
+          toast.error("Failed to load products.");
+        }
+      );
     } else {
-      setProducts([]);
+      setProducts(initialProducts || []);
     }
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [session]);
+  }, [session, initialProducts]);
 
   const filteredProducts = products.filter((product) =>
     product.item.toLowerCase().includes(searchTerm.toLowerCase())
@@ -86,36 +100,36 @@ export default function SalesClient({ initialProducts }) {
       !selectedSerialNumber
     ) {
       setError("Please enter a valid quantity and select a serial number.");
-      toast.error("Please enter a valid quantity and select a serial number.");
+      toast.error("Invalid quantity or serial number.");
       return;
     }
 
     if (!session) {
       setError("Authentication required");
-      toast.error("Authentication required");
+      toast.error("Please log in.");
       return;
     }
 
     if (paymentMethod === "transfer" && !receiptFile) {
       setError("Please upload a transfer receipt.");
-      toast.error("Please upload a transfer receipt.");
+      toast.error("Receipt required for transfer.");
       return;
     }
 
-    const salespersonBranchId = session.user.branchId;
+    const salespersonBranchId = session.user.branchId || "dutse";
     if (
       selectedProduct.branchId !== salespersonBranchId &&
       session.user.role !== "admin"
     ) {
       setError("You can only sell products from your assigned branch.");
-      toast.error("You can only sell products from your assigned branch.");
+      toast.error("Branch mismatch.");
       return;
     }
 
     const quantityToSell = parseInt(sellQuantity);
     if (quantityToSell > selectedProduct.quantity) {
       setError("Cannot sell more than available quantity!");
-      toast.error("Cannot sell more than available quantity!");
+      toast.error("Quantity exceeds stock.");
       return;
     }
 
@@ -162,7 +176,7 @@ export default function SalesClient({ initialProducts }) {
         totalAmount: quantityToSell * selectedProduct.salePrice,
         serialNumberSold: selectedSerialNumber,
         salespersonId: session.user.email,
-        branchId: selectedProduct.branchId || "",
+        branchId: selectedProduct.branchId || "dutse",
         paymentMethod,
         receiptUrl,
         timestamp: new Date().toISOString(),
@@ -184,7 +198,7 @@ export default function SalesClient({ initialProducts }) {
     } catch (error) {
       console.error("Error processing sale:", error);
       setError("Failed to process sale. Please try again.");
-      toast.error("Failed to process sale.");
+      toast.error("Sale processing failed.");
     } finally {
       setLoading(false);
     }
@@ -204,7 +218,7 @@ export default function SalesClient({ initialProducts }) {
     {
       key: "serialNumbers",
       label: "Serial Numbers",
-      render: (row) => row.serialNumbers.join(", "),
+      render: (row) => (row.serialNumbers || []).join(", "),
     },
     { key: "category", label: "Category" },
     { key: "subCategory", label: "Sub Category" },
@@ -255,12 +269,13 @@ export default function SalesClient({ initialProducts }) {
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             disabled={loading}
           >
-            {selectedProduct?.serialNumbers.map((sn) => (
+            {(selectedProduct?.serialNumbers || []).map((sn) => (
               <option key={sn} value={sn}>
                 {sn}
               </option>
             ))}
           </select>
+          -Bass{" "}
         </label>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">
           Payment Method:
@@ -326,7 +341,7 @@ export default function SalesClient({ initialProducts }) {
             </p>
             <p>
               <strong>Serial Numbers:</strong>{" "}
-              {selectedProduct.serialNumbers.join(", ")}
+              {(selectedProduct.serialNumbers || []).join(", ")}
             </p>
             <p>
               <strong>Category:</strong> {selectedProduct.category}
@@ -343,6 +358,9 @@ export default function SalesClient({ initialProducts }) {
             <p>
               <strong>Description:</strong>{" "}
               {selectedProduct.description || "N/A"}
+            </p>
+            <p>
+              <strong>Branch:</strong> {selectedProduct.branchId || "Dutse"}
             </p>
           </div>
         )}
