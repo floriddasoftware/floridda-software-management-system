@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Home, Box, DollarSign, PlusSquare } from "lucide-react";
+import { Home, Box, DollarSign, PlusSquare, Building } from "lucide-react";
 import CollapseButton from "./CollapseButton";
 import Footer from "./Footer";
 
@@ -21,6 +21,7 @@ export default function Sidebar({
           { href: "/products", icon: Box, label: "Products" },
           { href: "/sales", icon: DollarSign, label: "Sales" },
           { href: "/add", icon: PlusSquare, label: "Add" },
+          { href: "/branches", icon: Building, label: "Branches" },
         ]
       : [
           { href: "/dashboard", icon: Home, label: "Dashboard" },

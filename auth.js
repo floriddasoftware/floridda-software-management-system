@@ -1,16 +1,9 @@
 import NextAuth from "next-auth";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { FirestoreAdapter } from "@auth/firebase-adapter";
-import { cert } from "firebase-admin/app";
-import { db } from "@/lib/firebaseConfig";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  updateDoc,
-  addDoc,
-} from "firebase/firestore";
+import { adminDb } from "@/lib/firebaseAdmin";
+
+const ADMIN_EMAIL = "floriddasoftware@gmail.com";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -27,62 +20,94 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       from: process.env.EMAIL_FROM,
     }),
   ],
-  adapter: FirestoreAdapter({
-    credential: cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.AUTH_FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.AUTH_FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    }),
-  }),
+  adapter: FirestoreAdapter(adminDb),
   pages: {
     signIn: "/login",
   },
   callbacks: {
     async signIn({ user }) {
-      const adminEmail = "eromotoya@gmail.com";
-      if (user.email === adminEmail) {
-        return true;
+      if (user.email === ADMIN_EMAIL) return true;
+
+      try {
+        const querySnapshot = await adminDb
+          .collection("users")
+          .where("email", "==", user.email)
+          .where("role", "==", "salesperson")
+          .get();
+
+        return !querySnapshot.empty;
+      } catch (error) {
+        console.error("Error checking user role:", error);
+        return false;
       }
-      const q = query(
-        collection(db, "users"),
-        where("email", "==", user.email),
-        where("role", "==", "salesperson") 
-      );
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
     },
     async session({ session }) {
       const { email } = session.user;
-      const q = query(collection(db, "users"), where("email", "==", email));
-      const querySnapshot = await getDocs(q);
 
-      if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
-        session.user.role = userData.role || "unknown";
-        if (email === "eromotoya@gmail.com") {
-          session.user.name = userData.name || "Floridda";
-          if (!userData.name) {
-            await updateDoc(querySnapshot.docs[0].ref, { name: "Floridda" });
-          }
-        } else {
-          session.user.name = userData.name || "N/A";
-        }
-      } else if (email === "eromotoya@gmail.com") {
+      if (email === ADMIN_EMAIL) {
         session.user.role = "admin";
         session.user.name = "Floridda";
-        await addDoc(collection(db, "users"), {
-          email,
-          role: "admin",
-          name: "Floridda",
-        });
-      } else {
+        session.user.branchId = null; 
+
+        try {
+          const adminQuery = await adminDb
+            .collection("users")
+            .where("email", "==", email)
+            .get();
+
+          if (adminQuery.empty) {
+            await adminDb.collection("users").add({
+              email,
+              role: "admin",
+              name: "Floridda",
+            });
+          }
+        } catch (error) {
+          console.error("Error ensuring admin exists:", error);
+        }
+
+        return session;
+      }
+
+      try {
+        const userQuery = await adminDb
+          .collection("users")
+          .where("email", "==", email)
+          .get();
+
+        if (!userQuery.empty) {
+          const userData = userQuery.docs[0].data();
+          session.user.role = userData.role || "unknown";
+          session.user.name = userData.name || "N/A";
+          session.user.branchId = userData.branchId || "";
+        } else {
+          const salespersonQuery = await adminDb
+            .collection("salespeople")
+            .where("email", "==", email)
+            .get();
+
+          if (!salespersonQuery.empty) {
+            const salespersonData = salespersonQuery.docs[0].data();
+            session.user.role = "salesperson";
+            session.user.name = salespersonData.name || "N/A";
+            session.user.branchId = salespersonData.branchId || "";
+          } else {
+            session.user.role = "unknown";
+            session.user.name = "N/A";
+            session.user.branchId = "";
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
         session.user.role = "unknown";
         session.user.name = "N/A";
+        session.user.branchId = "";
       }
+
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      return baseUrl + "/dashboard";
+    redirect({ baseUrl }) {
+      return `${baseUrl}/dashboard`;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

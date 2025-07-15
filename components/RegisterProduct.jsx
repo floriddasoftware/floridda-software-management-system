@@ -19,7 +19,7 @@ export default function RegisterProduct({
     costPrice: "",
     salePrice: "",
     modelNumber: "",
-    serialNumber: "",
+    serialNumbers: [], 
     color: "",
     storage: "",
     category: "",
@@ -39,7 +39,7 @@ export default function RegisterProduct({
         costPrice: productToEdit.costPrice || "",
         salePrice: productToEdit.salePrice || "",
         modelNumber: productToEdit.modelNumber || "",
-        serialNumber: productToEdit.serialNumber || "",
+        serialNumbers: productToEdit.serialNumbers || [], // Load existing serial numbers
         color: productToEdit.color || "",
         storage: productToEdit.storage || "",
         category: productToEdit.category || "",
@@ -53,7 +53,7 @@ export default function RegisterProduct({
         costPrice: "",
         salePrice: "",
         modelNumber: "",
-        serialNumber: "",
+        serialNumbers: [],
         color: "",
         storage: "",
         category: "",
@@ -68,23 +68,24 @@ export default function RegisterProduct({
     setError("");
     setLoading(true);
 
-    // Convert form data to correct types
     const quantity = parseInt(formData.quantity, 10);
     const costPrice = parseFloat(formData.costPrice);
     const salePrice = parseFloat(formData.salePrice);
 
-    // Validate the inputs
+    // Validation
     if (
       !formData.item.trim() ||
       isNaN(quantity) ||
       isNaN(costPrice) ||
       isNaN(salePrice) ||
       !formData.modelNumber.trim() ||
-      !formData.serialNumber.trim() ||
       !formData.category.trim() ||
-      !formData.subCategory.trim()
+      !formData.subCategory.trim() ||
+      formData.serialNumbers.length !== quantity
     ) {
-      setError("Please fill in all required fields with valid data.");
+      setError(
+        "Please fill in all required fields and provide serial numbers equal to the quantity."
+      );
       setLoading(false);
       return;
     }
@@ -112,20 +113,26 @@ export default function RegisterProduct({
         costPrice,
         salePrice,
         modelNumber: formData.modelNumber,
-        serialNumber: formData.serialNumber,
+        serialNumbers: formData.serialNumbers, 
         color: formData.color,
         storage: formData.storage,
         category: formData.category,
         subCategory: formData.subCategory,
         description: formData.description,
+        owner: session?.user?.id || "",
+        branchId: session?.user?.branchId || "", 
       };
 
+      let savedProduct;
       if (isEditing) {
         await updateDoc(doc(db, "products", productToEdit.id), productData);
+        savedProduct = { id: productToEdit.id, ...productData };
       } else {
-        await addDoc(collection(db, "products"), productData);
+        const docRef = await addDoc(collection(db, "products"), productData);
+        savedProduct = { id: docRef.id, ...productData };
       }
 
+      // Notify if stock is low
       if (quantity < 5 && session?.user?.email) {
         await addDoc(collection(db, "notifications"), {
           userId: session.user.email,
@@ -134,8 +141,7 @@ export default function RegisterProduct({
           timestamp: new Date().toISOString(),
         });
       }
-      onSaveComplete();
-      onClose();
+      onSaveComplete(savedProduct);
     } catch (err) {
       console.error("Error saving product:", err);
       setError("Failed to save product. Please try again.");
@@ -146,6 +152,11 @@ export default function RegisterProduct({
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSerialNumbersChange = (e) => {
+    const serials = e.target.value.split(",").map((s) => s.trim());
+    setFormData({ ...formData, serialNumbers: serials });
   };
 
   return (
@@ -209,14 +220,18 @@ export default function RegisterProduct({
             required
             disabled={loading}
           />
-          <FormField
-            label="Serial Number"
-            name="serialNumber"
-            value={formData.serialNumber}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Serial Numbers (comma-separated)
+            <input
+              type="text"
+              value={formData.serialNumbers.join(", ")}
+              onChange={handleSerialNumbersChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={loading}
+              placeholder="e.g., SN1, SN2, SN3"
+            />
+          </label>
           <FormField
             label="Category"
             name="category"

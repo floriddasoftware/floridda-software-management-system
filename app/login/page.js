@@ -1,31 +1,70 @@
 "use client";
 import Image from "next/image";
 import { Smartphone } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { db } from "@/lib/firebaseConfig";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isValidEmail, setIsValidEmail] = useState(false);
+
+  const ADMIN_EMAIL = "floriddasoftware@gmail.com";
+
+  useEffect(() => {
+    const checkEmailValidity = async () => {
+      if (!email) {
+        setIsValidEmail(false);
+        return;
+      }
+
+      if (email === ADMIN_EMAIL) {
+        setIsValidEmail(true);
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, "users"),
+          where("email", "==", email),
+          where("role", "==", "salesperson")
+        );
+        const querySnapshot = await getDocs(q);
+        setIsValidEmail(!querySnapshot.empty);
+      } catch (error) {
+        console.error("Error checking email:", error);
+        setIsValidEmail(false);
+      }
+    };
+
+    const timeoutId = setTimeout(checkEmailValidity, 500);
+    return () => clearTimeout(timeoutId);
+  }, [email]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isValidEmail) return;
+
     setError("");
     setMessage("");
     setLoading(true);
+
     const res = await signIn("nodemailer", {
       email: email,
       redirect: false,
       callbackUrl: "/dashboard",
     });
+
     setLoading(false);
     if (res?.error) {
       setError("Failed to send login email.");
     } else {
-      setMessage("Check your email!");
+      setMessage("Check your email! You should receive a login link shortly.");
       setEmail("");
     }
   };
@@ -81,12 +120,21 @@ export default function LoginPage() {
                 required
                 disabled={loading}
               />
+              {/* {email && !isValidEmail && (
+                // <p className="text-red-500 text-sm mt-1">
+                //   This email is not authorized to access the system
+                // </p>
+              )} */}
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition cursor-pointer"
-              disabled={loading}
+              className={`w-full py-3 text-white rounded-lg font-medium transition ${
+                isValidEmail
+                  ? "bg-purple-600 hover:bg-purple-700 cursor-pointer"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
+              disabled={loading || !isValidEmail}
             >
               {loading ? "Sending..." : "Login"}
             </button>

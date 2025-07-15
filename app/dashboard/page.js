@@ -1,34 +1,33 @@
-"use server";
-import React from "react";
-import DashboardPage from "./dashboard";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebaseConfig";
+import { adminDb } from "@/lib/firebaseAdmin";
+import DashboardClient from "./dashboardClient";
 
-const page = () => {
-  const fetchData = async () => {
-    try {
-      const salesSnapshot = await getDocs(collection(db, "sales"));
-      const salesData = salesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+async function fetchDashboardData() {
+  try {
+    const salesSnapshot = await adminDb.collection("sales").get();
+    const salesData = salesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      timestamp: doc.data().timestamp || new Date().toISOString(),
+    }));
 
-      const productsSnapshot = await getDocs(collection(db, "products"));
-      const productsData = productsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
+    const productsSnapshot = await adminDb.collection("products").get();
+    const productsData = productsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-  fetchData()
+    return { salesData, productsData };
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    return { salesData: [], productsData: [] };
+  }
+}
+
+export default async function DashboardPage() {
+  const { salesData, productsData } = await fetchDashboardData();
   return (
     <main>
-      <DashboardPage salesData={salesData} productsData={productsData} />
+      <DashboardClient salesData={salesData} productsData={productsData} />
     </main>
   );
-};
-
-export default page;
+}
