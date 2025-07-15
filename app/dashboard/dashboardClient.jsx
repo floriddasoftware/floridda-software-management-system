@@ -21,6 +21,7 @@ import { useTheme } from "@/components/ThemeContext";
 import { db } from "@/lib/firebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
 import { CSVLink } from "react-csv";
+import Table from "@/components/Table";
 
 export default function DashboardClient({ salesData, productsData }) {
   const { data: session, status } = useSession();
@@ -52,7 +53,7 @@ export default function DashboardClient({ salesData, productsData }) {
   }, [session]);
 
   useEffect(() => {
-    if (!salesData) return; 
+    if (!salesData) return;
 
     if (session?.user?.role === "admin") {
       let sales = salesData;
@@ -191,6 +192,19 @@ export default function DashboardClient({ salesData, productsData }) {
     BranchId: sale.branchId || "N/A",
     SalespersonId: sale.salespersonId || "N/A",
   }));
+
+  const salesColumns = [
+    { key: "item", label: "Item" },
+    { key: "quantity", label: "Quantity" },
+    { key: "totalAmount", label: "Total Amount" },
+    { key: "paymentMethod", label: "Payment Method" },
+    {
+      key: "timestamp",
+      label: "Date",
+      render: (row) => new Date(row.timestamp).toLocaleString(),
+    },
+    { key: "salespersonId", label: "Salesperson" },
+  ];
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -343,7 +357,21 @@ export default function DashboardClient({ salesData, productsData }) {
               )}
             </div>
           </div>
-          <div className="flex justify-end mb-4">
+
+          <div className="mt-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+              Transaction History
+            </h2>
+            {filteredSales.length > 0 ? (
+              <Table columns={salesColumns} data={filteredSales} />
+            ) : (
+              <p className="text-gray-900 dark:text-white">
+                No transactions for this period.
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end mt-4 mb-4">
             <CSVLink
               data={csvData}
               filename={`sales_report_${

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebaseConfig";
+import { db, storage } from "@/lib/firebaseConfig";
 import {
   collection,
   onSnapshot,
@@ -11,6 +11,7 @@ import {
   addDoc,
   deleteDoc,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useSession } from "next-auth/react";
 import Table from "@/components/Table";
 import Modal from "@/components/Modal";
@@ -25,17 +26,17 @@ export default function SalesClient({ initialProducts }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [sellQuantity, setSellQuantity] = useState("");
   const [selectedSerialNumber, setSelectedSerialNumber] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [receiptFile, setReceiptFile] = useState(null);
   const [showSellModal, setShowSellModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { searchTerm } = useSearch();
 
-  // Fetch products based on user role and branch
   useEffect(() => {
     let unsubscribe;
     if (session?.user?.role === "admin") {
-      // Admins see all products
       unsubscribe = onSnapshot(collection(db, "products"), (snapshot) => {
         const productsData = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -44,7 +45,6 @@ export default function SalesClient({ initialProducts }) {
         setProducts(productsData);
       });
     } else if (session?.user?.branchId) {
-      // Salespeople see only their branch's products
       const q = query(
         collection(db, "products"),
         where("branchId", "==", session.user.branchId)
@@ -57,11 +57,8 @@ export default function SalesClient({ initialProducts }) {
         setProducts(productsData);
       });
     } else {
-      // No branch assigned, show nothing
       setProducts([]);
     }
-
-    // Cleanup subscription on unmount
     return () => {
       if (unsubscribe) unsubscribe();
     };
@@ -75,6 +72,8 @@ export default function SalesClient({ initialProducts }) {
     setSelectedProduct(product);
     setSellQuantity("");
     setSelectedSerialNumber(product.serialNumbers[0] || "");
+    setPaymentMethod("cash");
+    setReceiptFile(null);
     setShowSellModal(true);
     setError("");
   };
@@ -97,6 +96,12 @@ export default function SalesClient({ initialProducts }) {
       return;
     }
 
+    if (paymentMethod === "transfer" && !receiptFile) {
+      setError("Please upload a transfer receipt.");
+      toast.error("Please upload a transfer receipt.");
+      return;
+    }
+
     const salespersonBranchId = session.user.branchId;
     if (
       selectedProduct.branchId !== salespersonBranchId &&
@@ -116,6 +121,16 @@ export default function SalesClient({ initialProducts }) {
 
     setLoading(true);
     try {
+      let receiptUrl = null;
+      if (paymentMethod === "transfer" && receiptFile) {
+        const storageRef = ref(
+          storage,
+          `receipts/${selectedProduct.id}-${Date.now()}`
+        );
+        await uploadBytes(storageRef, receiptFile);
+        receiptUrl = await getDownloadURL(storageRef);
+      }
+
       const newQuantity = selectedProduct.quantity - quantityToSell;
       const newSerialNumbers = selectedProduct.serialNumbers.filter(
         (sn) => sn !== selectedSerialNumber
@@ -147,6 +162,9 @@ export default function SalesClient({ initialProducts }) {
         totalAmount: quantityToSell * selectedProduct.salePrice,
         serialNumberSold: selectedSerialNumber,
         salespersonId: session.user.email,
+        branchId: selectedProduct.branchId || "",
+        paymentMethod,
+        receiptUrl,
         timestamp: new Date().toISOString(),
       });
 
@@ -162,6 +180,7 @@ export default function SalesClient({ initialProducts }) {
       toast.success("Sale processed successfully!");
       setShowSellModal(false);
       setSelectedProduct(null);
+      setReceiptFile(null);
     } catch (error) {
       console.error("Error processing sale:", error);
       setError("Failed to process sale. Please try again.");
@@ -243,6 +262,30 @@ export default function SalesClient({ initialProducts }) {
             ))}
           </select>
         </label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">
+          Payment Method:
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={loading}
+          >
+            <option value="cash">Cash</option>
+            <option value="transfer">Transfer</option>
+          </select>
+        </label>
+        {paymentMethod === "transfer" && (
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">
+            Upload Transfer Receipt:
+            <input
+              type="file"
+              onChange={(e) => setReceiptFile(e.target.files[0])}
+              className="mt-1 block w-full text-gray-700 dark:text-gray-300"
+              accept="image/*,application/pdf"
+              disabled={loading}
+            />
+          </label>
+        )}
         {error && (
           <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>
         )}

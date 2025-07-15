@@ -7,11 +7,13 @@ import {
   getDocs,
   updateDoc,
   doc,
+  deleteDoc,
 } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import Table from "@/components/Table";
+import { Edit, Trash } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -26,14 +28,26 @@ export default function ManageBranches({
   const [products, setProducts] = useState(initialProducts || []);
   const [formData, setFormData] = useState({ name: "", location: "" });
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Handle input changes
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Add a new branch
   const handleAddBranch = async (e) => {
     e.preventDefault();
     if (!session || session.user.role !== "admin") {
       toast.error("Unauthorized action");
+      return;
+    }
+
+    if (!formData.name.trim() || !formData.location.trim()) {
+      toast.error("Please provide both branch name and location.");
       return;
     }
 
@@ -53,59 +67,83 @@ export default function ManageBranches({
     }
   };
 
-  const handleAssign = (branch) => {
+  // Initiate edit branch
+  const handleEdit = (branch) => {
+    if (!session || session.user.role !== "admin") {
+      toast.error("Unauthorized action");
+      return;
+    }
     setSelectedBranch(branch);
-    setShowAssignModal(true);
+    setFormData({ name: branch.name, location: branch.location });
+    setShowEditModal(true);
   };
 
-  const handleAssignSubmit = async (e) => {
+  // Update branch
+  const handleUpdateBranch = async (e) => {
     e.preventDefault();
     if (!session || session.user.role !== "admin") {
+      toast.error("Unauthorized action");
+      return;
+    }
+    if (!formData.name.trim() || !formData.location.trim()) {
+      toast.error("Please provide both branch name and location.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const updatedBranch = {
+        name: formData.name,
+        location: formData.location,
+      };
+      await updateDoc(doc(db, "branches", selectedBranch.id), updatedBranch);
+      setBranches(
+        branches.map((b) =>
+          b.id === selectedBranch.id ? { ...b, ...updatedBranch } : b
+        )
+      );
+      toast.success("Branch updated successfully!");
+      setShowEditModal(false);
+      setSelectedBranch(null);
+      setFormData({ name: "", location: "" });
+    } catch (error) {
+      console.error("Error updating branch:", error);
+      toast.error("Failed to update branch.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initiate delete branch
+  const handleDelete = (branch) => {
+    if (!session || session.user.role !== "admin") {
+      toast.error("Unauthorized action");
+      return;
+    }
+    setSelectedBranch(branch);
+    setShowConfirmDelete(true);
+  };
+
+  // Confirm and delete branch
+  const confirmDelete = async () => {
+    if (!selectedBranch || !session || session.user.role !== "admin") {
       toast.error("Unauthorized action");
       return;
     }
 
     setLoading(true);
     try {
-      const selectedSalesperson = e.target.salesperson.value;
-      const selectedProduct = e.target.product.value;
-
-      if (selectedSalesperson) {
-        await updateDoc(doc(db, "salespeople", selectedSalesperson), {
-          branchId: selectedBranch.id,
-        });
-        setSalespersons(
-          salespersons.map((s) =>
-            s.id === selectedSalesperson
-              ? { ...s, branchId: selectedBranch.id }
-              : s
-          )
-        );
-      }
-
-      if (selectedProduct) {
-        await updateDoc(doc(db, "products", selectedProduct), {
-          branchId: selectedBranch.id,
-        });
-        setProducts(
-          products.map((p) =>
-            p.id === selectedProduct ? { ...p, branchId: selectedBranch.id } : p
-          )
-        );
-      }
-
-      toast.success("Assignments updated successfully!");
-      setShowAssignModal(false);
+      await deleteDoc(doc(db, "branches", selectedBranch.id));
+      setBranches(branches.filter((b) => b.id !== selectedBranch.id));
+      toast.success("Branch deleted successfully!");
     } catch (error) {
-      console.error("Error assigning:", error);
-      toast.error("Failed to assign.");
+      console.error("Error deleting branch:", error);
+      toast.error("Failed to delete branch.");
     } finally {
       setLoading(false);
+      setShowConfirmDelete(false);
+      setSelectedBranch(null);
     }
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const columns = [
@@ -113,7 +151,10 @@ export default function ManageBranches({
     { key: "location", label: "Location" },
   ];
 
-  const actions = [{ label: "Assign", onClick: handleAssign }];
+  const actions = [
+    { onClick: handleEdit, icon: <Edit className="w-5 h-5 text-blue-600" /> },
+    { onClick: handleDelete, icon: <Trash className="w-5 h-5 text-red-600" /> },
+  ];
 
   return (
     <div className="container mx-auto p-4">
@@ -121,9 +162,11 @@ export default function ManageBranches({
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Manage Branches
       </h1>
-      <Button onClick={() => setShowAddModal(true)} disabled={loading}>
-        Add Branch
-      </Button>
+      <div className="flex space-x-4 mb-8">
+        <Button onClick={() => setShowAddModal(true)} disabled={loading}>
+          Add Branch
+        </Button>
+      </div>
 
       {branches.length > 0 ? (
         <Table columns={columns} data={branches} actions={actions} />
@@ -131,6 +174,7 @@ export default function ManageBranches({
         <p className="text-gray-900 dark:text-white">No branches added yet.</p>
       )}
 
+      {/* Add Branch Modal */}
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -172,54 +216,72 @@ export default function ManageBranches({
         </form>
       </Modal>
 
+      {/* Edit Branch Modal */}
       <Modal
-        isOpen={showAssignModal}
-        onClose={() => setShowAssignModal(false)}
-        title={`Assign to ${selectedBranch?.name}`}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Branch"
       >
-        <form onSubmit={handleAssignSubmit} className="space-y-4">
+        <form onSubmit={handleUpdateBranch} className="space-y-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Assign Salesperson
-            <select
-              name="salesperson"
+            Branch Name
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
               disabled={loading}
-            >
-              <option value="">Select Salesperson</option>
-              {salespersons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.email})
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Assign Product
-            <select
-              name="product"
+            Location
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
               disabled={loading}
-            >
-              <option value="">Select Product</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.item} (Model: {p.modelNumber})
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <div className="flex justify-end space-x-2">
-            <Button
-              onClick={() => setShowAssignModal(false)}
-              disabled={loading}
-            >
+            <Button onClick={() => setShowEditModal(false)} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Assigning..." : "Assign"}
+              {loading ? "Updating..." : "Update Branch"}
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Confirm Delete Modal */}
+      <Modal
+        isOpen={showConfirmDelete}
+        onClose={() => setShowConfirmDelete(false)}
+        title="Confirm Deletion"
+      >
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Are you sure you want to delete the branch "{selectedBranch?.name}"?
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button
+            onClick={() => setShowConfirmDelete(false)}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            className="bg-red-600 hover:bg-red-700"
+            disabled={loading}
+          >
+            {loading ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
       </Modal>
     </div>
   );

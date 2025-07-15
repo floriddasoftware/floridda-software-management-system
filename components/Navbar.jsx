@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Bell, User, PhoneCall, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import SettingsDropdown from "./SettingsDropdown";
 import { useTheme } from "./ThemeContext";
@@ -19,6 +20,9 @@ export default function Navbar({ className = "" }) {
   const [notifications, setNotifications] = useState([]);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const path = usePathname() || "";
+
+  const showSearchBar = path === "/products" || path === "/sales";
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -64,9 +68,11 @@ export default function Navbar({ className = "" }) {
         </div>
       </Link>
 
-      <div className="flex flex-1 max-w-2xl mx-4">
-        <SearchBar />
-      </div>
+      {showSearchBar && (
+        <div className="flex flex-1 max-w-2xl mx-4">
+          <SearchBar />
+        </div>
+      )}
 
       <div className="hidden items-center gap-8 lg:flex">
         <ThemeToggle />
