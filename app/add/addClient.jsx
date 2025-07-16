@@ -37,9 +37,18 @@ export default function AddClient({ initialSalespersons = [] }) {
       const unsubscribeBranches = onSnapshot(
         collection(db, "branches"),
         (snapshot) => {
-          setBranches(
-            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-          );
+          const branchData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setBranches(branchData);
+          if (branchData.length === 1) {
+            setFormData((prev) => ({ ...prev, branchId: branchData[0].id }));
+          }
+        },
+        (error) => {
+          console.error("Error fetching branches:", error);
+          toast.error("Failed to load branches.");
         }
       );
       const unsubscribeSalespersons = onSnapshot(
@@ -48,6 +57,10 @@ export default function AddClient({ initialSalespersons = [] }) {
           setSalespersons(
             snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
           );
+        },
+        (error) => {
+          console.error("Error fetching salespeople:", error);
+          toast.error("Failed to load salespeople.");
         }
       );
       return () => {
@@ -65,6 +78,10 @@ export default function AddClient({ initialSalespersons = [] }) {
     }
     if (!formData.email.trim() || !formData.name.trim() || !formData.branchId) {
       toast.error("Email, name, and branch are required.");
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error("Please enter a valid email address.");
       return;
     }
     setLoading(true);
@@ -168,6 +185,7 @@ export default function AddClient({ initialSalespersons = [] }) {
             name="email"
             type="email"
             value={formData.email}
+            on的可
             onChange={handleChange}
             required
             disabled={loading}
@@ -232,7 +250,7 @@ export default function AddClient({ initialSalespersons = [] }) {
           </Button>
           <Button
             onClick={confirmDelete}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-Brit7"
             disabled={loading}
           >
             {loading ? "Removing..." : "Remove"}

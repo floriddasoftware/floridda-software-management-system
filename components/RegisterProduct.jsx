@@ -44,16 +44,21 @@ export default function RegisterProduct({
     const fetchBranches = async () => {
       try {
         const snapshot = await getDocs(collection(db, "branches"));
-        setBranches(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        );
+        const branchData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setBranches(branchData);
+        if (!isEditing && branchData.length === 1) {
+          setFormData((prev) => ({ ...prev, branchId: branchData[0].id }));
+        }
       } catch (error) {
         console.error("Error fetching branches:", error);
         toast.error("Failed to fetch branches.");
       }
     };
     fetchBranches();
-  }, []);
+  }, [isEditing]);
 
   useEffect(() => {
     if (productToEdit) {
@@ -84,7 +89,7 @@ export default function RegisterProduct({
         category: "",
         subCategory: "",
         description: "",
-        branchId: branches.length === 1 ? branches[0]?.id : "",
+        branchId: "",
       });
     }
   }, [productToEdit, branches]);
@@ -106,13 +111,10 @@ export default function RegisterProduct({
       !formData.modelNumber.trim() ||
       !formData.category.trim() ||
       !formData.subCategory.trim() ||
-      formData.serialNumbers.length !== quantity ||
       !formData.branchId
     ) {
-      setError(
-        "Please fill in all required fields and ensure serial numbers match quantity."
-      );
-      toast.error("Invalid input data.");
+      setError("Please fill in all required fields.");
+      toast.error("Missing required fields.");
       setLoading(false);
       return;
     }
@@ -132,6 +134,12 @@ export default function RegisterProduct({
     if (salePrice < costPrice) {
       setError("Sale Price must be greater than or equal to Cost Price.");
       toast.error("Sale Price too low.");
+      setLoading(false);
+      return;
+    }
+    if (formData.serialNumbers.length !== quantity) {
+      setError("Number of serial numbers must match quantity.");
+      toast.error("Serial numbers mismatch.");
       setLoading(false);
       return;
     }

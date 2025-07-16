@@ -37,21 +37,35 @@ export default function SalesClient({ initialProducts = [] }) {
   useEffect(() => {
     let unsubscribe;
     if (session?.user?.role === "admin") {
-      unsubscribe = onSnapshot(collection(db, "products"), (snapshot) => {
-        setProducts(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        );
-      });
+      unsubscribe = onSnapshot(
+        collection(db, "products"),
+        (snapshot) => {
+          setProducts(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        },
+        (error) => {
+          console.error("Error fetching products:", error);
+          toast.error("Failed to load products.");
+        }
+      );
     } else if (session?.user?.branchId) {
       const q = query(
         collection(db, "products"),
         where("branchId", "==", session.user.branchId)
       );
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        setProducts(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        );
-      });
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          setProducts(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        },
+        (error) => {
+          console.error("Error fetching products:", error);
+          toast.error("Failed to load products.");
+        }
+      );
     }
     return () => unsubscribe && unsubscribe();
   }, [session]);
