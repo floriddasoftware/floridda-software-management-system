@@ -205,6 +205,8 @@ export default function DashboardClient({ salesData, productsData }) {
     Item: sale.item || "N/A",
     Quantity: sale.quantity || 0,
     TotalAmount: sale.totalAmount || 0,
+    PaymentMethod: sale.paymentMethod || "N/A",
+    ReceiptUrl: sale.receiptUrl || "N/A",
     Timestamp: sale.timestamp || "N/A",
     BranchId: sale.branchId || "N/A",
     SalespersonId: sale.salespersonId || "N/A",
@@ -215,6 +217,23 @@ export default function DashboardClient({ salesData, productsData }) {
     { key: "quantity", label: "Quantity" },
     { key: "totalAmount", label: "Total Amount" },
     { key: "paymentMethod", label: "Payment Method" },
+    {
+      key: "receiptUrl",
+      label: "Receipt",
+      render: (row) =>
+        row.receiptUrl ? (
+          <a
+            href={row.receiptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            View
+          </a>
+        ) : (
+          "N/A"
+        ),
+    },
     {
       key: "timestamp",
       label: "Date",

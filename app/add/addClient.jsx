@@ -3,8 +3,7 @@ import { useState, useEffect } from "react";
 import { db } from "@/lib/firebaseConfig";
 import {
   collection,
-  addDoc,
-  deleteDoc,
+  setDoc,
   doc,
   onSnapshot,
   query,
@@ -57,7 +56,7 @@ export default function AddClient({ initialSalespersons = [] }) {
     );
 
     const unsubscribeSalespersons = onSnapshot(
-      query(collection(db, "users"), where("role", "==", "salesperson")),
+      query(collection(db, "userProfiles"), where("role", "==", "salesperson")),
       (snapshot) => {
         setSalespersons(
           snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -91,9 +90,10 @@ export default function AddClient({ initialSalespersons = [] }) {
     }
     setLoading(true);
     try {
+      const lowerEmail = formData.email.trim().toLowerCase();
       const emailQuery = query(
-        collection(db, "users"),
-        where("email", "==", formData.email)
+        collection(db, "userProfiles"),
+        where("email", "==", lowerEmail)
       );
       const emailSnapshot = await getDocs(emailQuery);
       if (!emailSnapshot.empty) {
@@ -103,7 +103,7 @@ export default function AddClient({ initialSalespersons = [] }) {
       }
 
       const newSalesperson = {
-        email: formData.email.trim(),
+        email: lowerEmail,
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         branchId: formData.branchId,
@@ -111,7 +111,7 @@ export default function AddClient({ initialSalespersons = [] }) {
         addedBy: session.user.email,
         createdAt: new Date().toISOString(),
       };
-      await addDoc(collection(db, "users"), newSalesperson);
+      await setDoc(doc(db, "userProfiles", lowerEmail), newSalesperson);
       toast.success("Salesperson added successfully!");
       setFormData({ email: "", name: "", phone: "", branchId: "" });
       setShowAddModal(false);
@@ -142,7 +142,7 @@ export default function AddClient({ initialSalespersons = [] }) {
     }
     setLoading(true);
     try {
-      await deleteDoc(doc(db, "users", salespersonToDelete.id));
+      await deleteDoc(doc(db, "userProfiles", salespersonToDelete.email));
       toast.success("Salesperson deleted successfully!");
     } catch (error) {
       console.error("Error deleting salesperson:", error);

@@ -14,24 +14,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isValidEmail, setIsValidEmail] = useState(false);
 
-  const ADMIN_EMAIL = "floriddasoftware@gmail.com";
+  const ADMIN_EMAIL = "floriddasoftware@gmail.com".toLowerCase();
 
   useEffect(() => {
     const checkEmailValidity = async () => {
-      if (!email) {
+      const lowerEmail = email.trim().toLowerCase();
+      if (!lowerEmail) {
         setIsValidEmail(false);
         return;
       }
 
-      if (email === ADMIN_EMAIL) {
+      if (lowerEmail === ADMIN_EMAIL) {
         setIsValidEmail(true);
         return;
       }
 
       try {
         const q = query(
-          collection(db, "users"),
-          where("email", "==", email),
+          collection(db, "userProfiles"),
+          where("email", "==", lowerEmail),
           where("role", "==", "salesperson")
         );
         const querySnapshot = await getDocs(q);
@@ -55,7 +56,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const res = await signIn("nodemailer", {
-      email: email,
+      email: email.trim().toLowerCase(),
       redirect: false,
       callbackUrl: "/dashboard",
     });

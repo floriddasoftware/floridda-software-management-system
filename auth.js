@@ -3,7 +3,7 @@ import Nodemailer from "next-auth/providers/nodemailer";
 import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminDb } from "@/lib/firebaseAdmin";
 
-const ADMIN_EMAIL = "floriddasoftware@gmail.com";
+const ADMIN_EMAIL = "floriddasoftware@gmail.com".toLowerCase();
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -24,15 +24,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: { signIn: "/login" },
   callbacks: {
     async signIn({ user }) {
-      console.log(`Sign-in attempt for email: ${user.email}`);
-      if (user.email === ADMIN_EMAIL) {
+      const lowerEmail = user.email.toLowerCase();
+      console.log(`Sign-in attempt for email: ${lowerEmail}`);
+      if (lowerEmail === ADMIN_EMAIL) {
         console.log("Admin email detected, allowing sign-in.");
         return true;
       }
       try {
         const querySnapshot = await adminDb
-          .collection("users")
-          .where("email", "==", user.email)
+          .collection("userProfiles")
+          .where("email", "==", lowerEmail)
           .where("role", "==", "salesperson")
           .get();
         const allowed = !querySnapshot.empty;
@@ -44,29 +45,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
     },
     async session({ session }) {
-      const { email } = session.user;
-      console.log(`Setting session for email: ${email}`);
+      const lowerEmail = session.user.email.toLowerCase();
+      console.log(`Setting session for email: ${lowerEmail}`);
       try {
-        const userQuery = await adminDb
-          .collection("users")
-          .where("email", "==", email)
+        const profileDoc = await adminDb
+          .collection("userProfiles")
+          .doc(lowerEmail)
           .get();
-        if (!userQuery.empty) {
-          const userData = userQuery.docs[0].data();
-          session.user.role = userData.role || "unknown";
-          session.user.name = userData.name || "N/A";
-          session.user.branchId = userData.branchId || null;
-          console.log(`User found: ${JSON.stringify(userData)}`);
-        } else if (email === ADMIN_EMAIL) {
+        if (profileDoc.exists) {
+          const profileData = profileDoc.data();
+          session.user.role = profileData.role || "unknown";
+          session.user.name = profileData.name || "N/A";
+          session.user.branchId = profileData.branchId || null;
+          console.log(`Profile found: ${JSON.stringify(profileData)}`);
+        } else if (lowerEmail === ADMIN_EMAIL) {
           session.user.role = "admin";
           session.user.name = "Floridda";
           session.user.branchId = null;
-          console.log("Admin not in DB, setting role and adding to users.");
-          await adminDb.collection("users").doc(email).set(
+          console.log("Admin email, setting role and creating profile.");
+          await adminDb.collection("userProfiles").doc(lowerEmail).set(
             {
-              email,
+              email: lowerEmail,
               role: "admin",
               name: "Floridda",
+              createdAt: new Date().toISOString(),
             },
             { merge: true }
           );
@@ -74,10 +76,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           session.user.role = "unknown";
           session.user.name = "N/A";
           session.user.branchId = null;
-          console.log("User not found and not admin, setting role to unknown.");
+          console.log("No profile found, setting role to unknown.");
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching user profile:", error);
         session.user.role = "unknown";
         session.user.name = "N/A";
         session.user.branchId = null;
