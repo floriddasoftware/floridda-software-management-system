@@ -32,10 +32,12 @@ export default function DashboardClient({ salesData, productsData }) {
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState("all");
   const [filteredSales, setFilteredSales] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (session?.user?.role === "admin") {
       const fetchBranches = async () => {
+        setLoading(true);
         try {
           const snapshot = await getDocs(collection(db, "branches"));
           const branchData = snapshot.docs.map((doc) => ({
@@ -46,6 +48,8 @@ export default function DashboardClient({ salesData, productsData }) {
         } catch (error) {
           console.error("Error fetching branches:", error);
           setBranches([]);
+        } finally {
+          setLoading(false);
         }
       };
       fetchBranches();
@@ -212,7 +216,7 @@ export default function DashboardClient({ salesData, productsData }) {
     }
   }, [status, router]);
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <p className="text-gray-900 dark:text-white p-4">Loading dashboard...</p>
     );

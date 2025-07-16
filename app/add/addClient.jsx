@@ -7,6 +7,9 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
@@ -88,6 +91,18 @@ export default function AddClient({ initialSalespersons = [] }) {
     }
     setLoading(true);
     try {
+      // Check for duplicate email
+      const emailQuery = query(
+        collection(db, "salespeople"),
+        where("email", "==", formData.email)
+      );
+      const emailSnapshot = await getDocs(emailQuery);
+      if (!emailSnapshot.empty) {
+        toast.error("A salesperson with this email already exists.");
+        setLoading(false);
+        return;
+      }
+
       const newSalesperson = {
         email: formData.email.trim(),
         name: formData.name.trim(),

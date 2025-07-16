@@ -2,19 +2,27 @@
 import { Search } from "lucide-react";
 import { useSearch } from "@/context/SearchContext";
 import { useRouter } from "next/navigation";
+import { debounce } from "lodash";
 
 export default function SearchBar() {
   const { searchTerm, setSearchTerm } = useSearch();
   const router = useRouter();
 
-  const handleSearch = (e) => {
-    const value = e.target.value;
+  const handleSearch = debounce((value) => {
     setSearchTerm(value);
-
     if (!window.location.pathname.includes("/products")) {
       router.push("/products");
     }
-  };
+  }, 300);
+
+  // const handleSearch = (e) => {
+  //   const value = e.target.value;
+  //   setSearchTerm(value);
+
+  //   if (!window.location.pathname.includes("/products")) {
+  //     router.push("/products");
+  //   }
+  // };
 
   return (
     <div className="relative w-full max-w-2xl">

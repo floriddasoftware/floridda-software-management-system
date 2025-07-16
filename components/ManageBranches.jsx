@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import { db } from "@/lib/firebaseConfig";
 import {
   collection,
-  addDoc,
   getDocs,
-  updateDoc,
+  setDoc,
   doc,
+  updateDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { useSession } from "next-auth/react";
@@ -24,7 +24,11 @@ export default function ManageBranches({
 }) {
   const { data: session } = useSession();
   const [branches, setBranches] = useState(initialBranches);
-  const [formData, setFormData] = useState({ name: "", location: "" });
+  const [formData, setFormData] = useState({
+    branchId: "",
+    name: "",
+    location: "",
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -32,20 +36,20 @@ export default function ManageBranches({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (session?.user?.role === "admin") {
-      const fetchBranches = async () => {
-        try {
-          const snapshot = await getDocs(collection(db, "branches"));
-          setBranches(
-            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-          );
-        } catch (error) {
-          console.error("Error fetching branches:", error);
-          toast.error("Failed to load branches.");
-        }
-      };
-      fetchBranches();
-    }
+    if (session?.user?.role !== "admin") return;
+
+    const fetchBranches = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "branches"));
+        setBranches(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      } catch (error) {
+        console.error("Error fetching branches:", error);
+        toast.error("Failed to load branches.");
+      }
+    };
+    fetchBranches();
   }, [session]);
 
   const handleChange = (e) =>
@@ -57,21 +61,28 @@ export default function ManageBranches({
       toast.error("Unauthorized action");
       return;
     }
-    if (!formData.name.trim() || !formData.location.trim()) {
-      toast.error("Branch name and location are required.");
+    if (
+      !formData.branchId.trim() ||
+      !formData.name.trim() ||
+      !formData.location.trim()
+    ) {
+      toast.error("Branch ID, name, and location are required.");
       return;
     }
     setLoading(true);
     try {
-      const newBranch = { name: formData.name, location: formData.location };
-      const docRef = await addDoc(collection(db, "branches"), newBranch);
-      setBranches([...branches, { id: docRef.id, ...newBranch }]);
+      const newBranch = {
+        name: formData.name.trim(),
+        location: formData.location.trim(),
+      };
+      await setDoc(doc(db, "branches", formData.branchId), newBranch);
+      setBranches([...branches, { id: formData.branchId, ...newBranch }]);
       toast.success("Branch added successfully!");
-      setFormData({ name: "", location: "" });
+      setFormData({ branchId: "", name: "", location: "" });
       setShowAddModal(false);
     } catch (error) {
       console.error("Error adding branch:", error);
-      toast.error("Failed to add branch.");
+      toast.error("Failed to add branch. Branch ID may already exist.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +94,11 @@ export default function ManageBranches({
       return;
     }
     setSelectedBranch(branch);
-    setFormData({ name: branch.name, location: branch.location });
+    setFormData({
+      branchId: branch.id,
+      name: branch.name,
+      location: branch.location,
+    });
     setShowEditModal(true);
   };
 
@@ -100,8 +115,8 @@ export default function ManageBranches({
     setLoading(true);
     try {
       const updatedBranch = {
-        name: formData.name,
-        location: formData.location,
+        name: formData.name.trim(),
+        location: formData.location.trim(),
       };
       await updateDoc(doc(db, "branches", selectedBranch.id), updatedBranch);
       setBranches(
@@ -112,7 +127,7 @@ export default function ManageBranches({
       toast.success("Branch updated successfully!");
       setShowEditModal(false);
       setSelectedBranch(null);
-      setFormData({ name: "", location: "" });
+      setFormData({ branchId: "", name: "", location: "" });
     } catch (error) {
       console.error("Error updating branch:", error);
       toast.error("Failed to update branch.");
@@ -151,6 +166,7 @@ export default function ManageBranches({
   };
 
   const columns = [
+    { key: "id", label: "Branch ID" }, 
     { key: "name", label: "Branch Name" },
     { key: "location", label: "Location" },
   ];
@@ -159,6 +175,12 @@ export default function ManageBranches({
     { onClick: handleEdit, icon: <Edit className="w-5 h-5 text-blue-600" /> },
     { onClick: handleDelete, icon: <Trash className="w-5 h-5 text-red-600" /> },
   ];
+
+  if (!session || session.user.role !== "admin") {
+    return (
+      <p className="text-gray-900 dark:text-white p-4">Unauthorized access.</p>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -182,6 +204,19 @@ export default function ManageBranches({
         title="Add New Branch"
       >
         <form onSubmit={handleAddBranch} className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Branch ID
+            <input
+              type="text"
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={loading}
+              placeholder="e.g., dutse"
+            />
+          </label>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Branch Name
             <input
@@ -222,6 +257,16 @@ export default function ManageBranches({
         title="Edit Branch"
       >
         <form onSubmit={handleUpdateBranch} className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Branch ID (Cannot be changed)
+            <input
+              type="text"
+              name="branchId"
+              value={formData.branchId}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-gray-100 dark:bg-gray-600"
+              disabled
+            />
+          </label>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Branch Name
             <input

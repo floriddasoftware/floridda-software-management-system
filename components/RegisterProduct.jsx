@@ -143,6 +143,13 @@ export default function RegisterProduct({
       setLoading(false);
       return;
     }
+    const uniqueSerials = new Set(formData.serialNumbers);
+    if (uniqueSerials.size !== formData.serialNumbers.length) {
+      setError("Serial numbers must be unique.");
+      toast.error("Duplicate serial numbers detected.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const productData = {
