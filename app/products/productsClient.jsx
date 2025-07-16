@@ -42,18 +42,20 @@ export default function ProductsClient({ initialProducts = [] }) {
   }, [session]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "products"));
-        setProducts(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        );
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        toast.error("Failed to load products.");
-      }
-    };
-    if (session?.user?.role === "admin") fetchProducts();
+    if (session?.user?.role === "admin") {
+      const fetchProducts = async () => {
+        try {
+          const snapshot = await getDocs(collection(db, "products"));
+          setProducts(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        } catch (error) {
+          console.error("Error fetching products:", error);
+          toast.error("Failed to load products.");
+        }
+      };
+      fetchProducts();
+    }
   }, [session]);
 
   const handleProductSave = (savedProduct) => {
@@ -137,6 +139,18 @@ export default function ProductsClient({ initialProducts = [] }) {
     { onClick: handleDelete, icon: <Trash className="w-5 h-5 text-red-600" /> },
   ];
 
+  if (!session) {
+    return <p className="text-gray-900 dark:text-white p-4">Loading...</p>;
+  }
+
+  if (session.user.role !== "admin") {
+    return (
+      <p className="text-gray-900 dark:text-white p-4">
+        You do not have permission to view this page.
+      </p>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
       <ToastContainer />
@@ -149,24 +163,22 @@ export default function ProductsClient({ initialProducts = [] }) {
             setProductToEdit(null);
             setShowModal(true);
           }}
-          disabled={loading || session?.user?.role !== "admin"}
+          disabled={loading}
         >
           Register Product
         </Button>
-        {session?.user?.role === "admin" && (
-          <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="p-2 border rounded bg-white dark:bg-gray-700 dark:text-white"
-          >
-            <option value="all">All Branches</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name} ({branch.location})
-              </option>
-            ))}
-          </select>
-        )}
+        <select
+          value={selectedBranch}
+          onChange={(e) => setSelectedBranch(e.target.value)}
+          className="p-2 border rounded bg-white dark:bg-gray-700 dark:text-white"
+        >
+          <option value="all">All Branches</option>
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name} ({branch.location})
+            </option>
+          ))}
+        </select>
       </div>
       {showModal && (
         <RegisterProduct

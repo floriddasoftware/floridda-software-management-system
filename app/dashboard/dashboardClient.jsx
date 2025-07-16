@@ -34,6 +34,7 @@ export default function DashboardClient({ salesData, productsData }) {
   const [filteredSales, setFilteredSales] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Fetch branches for admins
   useEffect(() => {
     if (session?.user?.role === "admin") {
       const fetchBranches = async () => {
@@ -56,21 +57,20 @@ export default function DashboardClient({ salesData, productsData }) {
     }
   }, [session]);
 
+  // Filter sales based on branch, view type, and date
   useEffect(() => {
-    if (!salesData) return;
+    if (!salesData || !session) return;
 
-    if (session?.user?.role === "admin") {
-      let sales = salesData;
+    let sales = salesData;
+    if (session.user.role === "admin") {
       if (selectedBranch !== "all") {
         sales = sales.filter((sale) => sale.branchId === selectedBranch);
       }
-      setFilteredSales(filterSales(sales, viewType, selectedDate));
-    } else if (session?.user?.email) {
-      const userSales = salesData.filter(
-        (sale) => sale.salespersonId === session.user.email
-      );
-      setFilteredSales(filterSales(userSales, viewType, selectedDate));
+    } else if (session.user.branchId) {
+      // Salespeople only see their branch's sales
+      sales = sales.filter((sale) => sale.branchId === session.user.branchId);
     }
+    setFilteredSales(filterSales(sales, viewType, selectedDate));
   }, [session, salesData, selectedBranch, viewType, selectedDate]);
 
   const filterSales = (sales, viewType, selectedDate) => {
@@ -167,7 +167,7 @@ export default function DashboardClient({ salesData, productsData }) {
     session?.user?.role === "admin"
   );
   const salesByCategory =
-    session?.user?.role === "admin"
+    session?.user?.reole === "admin"
       ? getSalesByCategory(filteredSales, productsData)
       : [];
 
@@ -210,6 +210,7 @@ export default function DashboardClient({ salesData, productsData }) {
     { key: "salespersonId", label: "Salesperson" },
   ];
 
+  // Redirect unauthenticated users to login
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -268,7 +269,7 @@ export default function DashboardClient({ salesData, productsData }) {
             <option value="all">All Branches</option>
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
-                {branch.name}
+                {branch.name} ({branch.location})
               </option>
             ))}
           </select>
@@ -290,6 +291,11 @@ export default function DashboardClient({ salesData, productsData }) {
             selectedBranch === "all"
               ? "All Branches"
               : branches.find((b) => b.id === selectedBranch)?.name || "Unknown"
+          }`}
+        {session.user.role === "salesperson" &&
+          ` - ${
+            branches.find((b) => b.id === session.user.branchId)?.name ||
+            "Your Branch"
           }`}
       </p>
 

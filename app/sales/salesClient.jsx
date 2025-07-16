@@ -10,6 +10,7 @@ import {
   doc,
   addDoc,
   deleteDoc,
+  getDocs,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useSession } from "next-auth/react";
@@ -23,6 +24,7 @@ import "react-toastify/dist/ReactToastify.css";
 export default function SalesClient({ initialProducts = [] }) {
   const { data: session } = useSession();
   const [products, setProducts] = useState(initialProducts);
+  const [branches, setBranches] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [sellQuantity, setSellQuantity] = useState("");
   const [selectedSerialNumber, setSelectedSerialNumber] = useState("");
@@ -33,6 +35,21 @@ export default function SalesClient({ initialProducts = [] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { searchTerm } = useSearch();
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "branches"));
+        setBranches(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      } catch (error) {
+        console.error("Error fetching branches:", error);
+        toast.error("Failed to load branches.");
+      }
+    };
+    fetchBranches();
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -139,7 +156,6 @@ export default function SalesClient({ initialProducts = [] }) {
         (sn) => sn !== selectedSerialNumber
       );
 
-      // Update product quantity or delete if sold out
       if (newQuantity > 0) {
         await updateDoc(doc(db, "products", selectedProduct.id), {
           quantity: newQuantity,
@@ -212,6 +228,12 @@ export default function SalesClient({ initialProducts = [] }) {
     },
     { key: "category", label: "Category" },
     { key: "subCategory", label: "Sub Category" },
+    {
+      key: "branchId",
+      label: "Branch",
+      render: (row) =>
+        branches.find((b) => b.id === row.branchId)?.name || "Unknown",
+    },
   ];
 
   const actions = [
@@ -340,6 +362,11 @@ export default function SalesClient({ initialProducts = [] }) {
             </p>
             <p>
               <strong>Sub Category:</strong> {selectedProduct.subCategory}
+            </p>
+            <p>
+              <strong>Branch:</strong>{" "}
+              {branches.find((b) => b.id === selectedProduct.branchId)?.name ||
+                "Unknown"}
             </p>
             <p>
               <strong>Color:</strong> {selectedProduct.color || "N/A"}
