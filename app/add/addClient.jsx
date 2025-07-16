@@ -46,7 +46,7 @@ export default function AddClient({ initialSalespersons = [] }) {
           ...doc.data(),
         }));
         setBranches(branchData);
-        if (branchData.length === 1) {
+        if (branchData.length === 1 && !formData.branchId) {
           setFormData((prev) => ({ ...prev, branchId: branchData[0].id }));
         }
       },
@@ -242,14 +242,20 @@ export default function AddClient({ initialSalespersons = [] }) {
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               required
-              disabled={loading}
+              disabled={loading || branches.length === 0}
             >
-              <option value="">Select Branch</option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name} ({branch.location})
-                </option>
-              ))}
+              {branches.length === 0 ? (
+                <option value="">No branches available</option>
+              ) : (
+                <>
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name} ({branch.location})
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
           <div className="flex justify-end space-x-2">

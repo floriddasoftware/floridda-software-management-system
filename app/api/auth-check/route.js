@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 
 export async function GET(request) {
   const session = await auth();
+  console.log(`Auth-check session: ${JSON.stringify(session)}`);
 
   if (session?.user) {
     return new Response(

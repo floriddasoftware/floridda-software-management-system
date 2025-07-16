@@ -34,7 +34,22 @@ export default function DashboardClient({ salesData, productsData }) {
   const [filteredSales, setFilteredSales] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch branches for admins
+  useEffect(() => {
+    if (status === "authenticated") {
+      console.log(`Dashboard session role: ${session.user.role}`);
+      if (
+        session.user.role !== "admin" &&
+        session.user.role !== "salesperson"
+      ) {
+        console.log("Unauthorized role, redirecting to /unauthorized");
+        router.push("/unauthorized");
+      }
+    } else if (status === "unauthenticated") {
+      console.log("Unauthenticated, redirecting to /login");
+      router.push("/login");
+    }
+  }, [status, session, router]);
+
   useEffect(() => {
     if (session?.user?.role === "admin") {
       const fetchBranches = async () => {
@@ -57,7 +72,6 @@ export default function DashboardClient({ salesData, productsData }) {
     }
   }, [session]);
 
-  // Filter sales based on branch, view type, and date
   useEffect(() => {
     if (!salesData || !session) return;
 
@@ -67,7 +81,6 @@ export default function DashboardClient({ salesData, productsData }) {
         sales = sales.filter((sale) => sale.branchId === selectedBranch);
       }
     } else if (session.user.branchId) {
-      // Salespeople only see their branch's sales
       sales = sales.filter((sale) => sale.branchId === session.user.branchId);
     }
     setFilteredSales(filterSales(sales, viewType, selectedDate));
@@ -167,7 +180,7 @@ export default function DashboardClient({ salesData, productsData }) {
     session?.user?.role === "admin"
   );
   const salesByCategory =
-    session?.user?.reole === "admin"
+    session?.user?.role === "admin"
       ? getSalesByCategory(filteredSales, productsData)
       : [];
 
@@ -209,13 +222,6 @@ export default function DashboardClient({ salesData, productsData }) {
     },
     { key: "salespersonId", label: "Salesperson" },
   ];
-
-  // Redirect unauthenticated users to login
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
 
   if (status === "loading" || loading) {
     return (
@@ -395,7 +401,7 @@ export default function DashboardClient({ salesData, productsData }) {
         </>
       )}
 
-      {session.user.role !== "admin" && (
+      {session.user.role === "salesperson" && (
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h2 className="font-semibold mb-4 text-gray-900 dark:text-white md:text-lg text-xs">
@@ -462,7 +468,7 @@ export default function DashboardClient({ salesData, productsData }) {
             </div>
           </>
         )}
-        {session.user.role !== "admin" && (
+        {session.user.role === "salesperson" && (
           <div className="bg-purple-100 dark:bg-purple-900 p-4 rounded-lg">
             <h3 className="text-gray-900 dark:text-white">
               Your Total Revenue
