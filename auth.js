@@ -46,49 +46,68 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session }) {
       const lowerEmail = session.user.email.toLowerCase();
-      console.log(`Setting session for email: ${lowerEmail}`);
-      try {
-        const profileDoc = await adminDb
-          .collection("userProfiles")
-          .doc(lowerEmail)
-          .get();
-        if (profileDoc.exists) {
-          const profileData = profileDoc.data();
-          session.user.role = profileData.role || "unknown";
-          session.user.name = profileData.name || "N/A";
-          session.user.branchId = profileData.branchId || null;
-          console.log(`Profile found: ${JSON.stringify(profileData)}`);
-        } else if (lowerEmail === ADMIN_EMAIL) {
-          session.user.role = "admin";
-          session.user.name = "Floridda";
-          session.user.branchId = null;
-          console.log("Admin email, setting role and creating profile.");
-          await adminDb.collection("userProfiles").doc(lowerEmail).set(
-            {
-              email: lowerEmail,
-              role: "admin",
-              name: "Floridda",
-              createdAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        } else {
+      console.log(`[Session] Setting session for email: ${lowerEmail}`);
+
+      if (lowerEmail === ADMIN_EMAIL) {
+        session.user.role = "admin";
+        session.user.name = "Floridda";
+        session.user.branchId = null;
+        console.log("[Session] Admin email detected, role set to 'admin'");
+
+        try {
+          const profileDoc = await adminDb
+            .collection("userProfiles")
+            .doc(lowerEmail)
+            .get();
+          if (!profileDoc.exists) {
+            await adminDb.collection("userProfiles").doc(lowerEmail).set(
+              {
+                email: lowerEmail,
+                role: "admin",
+                name: "Floridda",
+                createdAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+            console.log("[Session] Admin profile created successfully");
+          } else {
+            console.log("[Session] Admin profile already exists");
+          }
+        } catch (error) {
+          console.error("[Session] Error creating admin profile:", error);
+        }
+      } else {
+        try {
+          const profileDoc = await adminDb
+            .collection("userProfiles")
+            .doc(lowerEmail)
+            .get();
+          if (profileDoc.exists) {
+            const profileData = profileDoc.data();
+            session.user.role = profileData.role || "unknown";
+            session.user.name = profileData.name || "N/A";
+            session.user.branchId = profileData.branchId || null;
+            console.log(
+              `[Session] Profile found: ${JSON.stringify(profileData)}`
+            );
+          } else {
+            session.user.role = "unknown";
+            session.user.name = "N/A";
+            session.user.branchId = null;
+            console.log("[Session] No profile found, role set to 'unknown'");
+          }
+        } catch (error) {
+          console.error("[Session] Error fetching user profile:", error);
           session.user.role = "unknown";
           session.user.name = "N/A";
           session.user.branchId = null;
-          console.log("No profile found, setting role to unknown.");
         }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        session.user.role = "unknown";
-        session.user.name = "N/A";
-        session.user.branchId = null;
       }
-      console.log(`Final session role: ${session.user.role}`);
+      console.log(`[Session] Final session role: ${session.user.role}`);
       return session;
     },
     async redirect({ baseUrl }) {
-      console.log(`Redirecting to: ${baseUrl}/dashboard`);
+      console.log(`[Redirect] Redirecting to: ${baseUrl}/dashboard`);
       return `${baseUrl}/dashboard`;
     },
   },
