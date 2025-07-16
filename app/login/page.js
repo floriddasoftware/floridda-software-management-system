@@ -1,85 +1,54 @@
 "use client";
-import Image from "next/image";
-import { Smartphone } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { Smartphone } from "lucide-react";
+import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
-import { db } from "@/lib/firebaseConfig";
-import { collection, query, where, getDocs } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isValidEmail, setIsValidEmail] = useState(false);
-
-  const ADMIN_EMAIL = "floriddasoftware@gmail.com";
-
-  useEffect(() => {
-    const checkEmailValidity = async () => {
-      if (!email) {
-        setIsValidEmail(false);
-        return;
-      }
-
-      if (email === ADMIN_EMAIL) {
-        setIsValidEmail(true);
-        return;
-      }
-
-      try {
-        const q = query(
-          collection(db, "users"),
-          where("email", "==", email),
-          where("role", "==", "salesperson")
-        );
-        const querySnapshot = await getDocs(q);
-        setIsValidEmail(!querySnapshot.empty);
-      } catch (error) {
-        console.error("Error checking email:", error);
-        setIsValidEmail(false);
-      }
-    };
-
-    const timeoutId = setTimeout(checkEmailValidity, 500);
-    return () => clearTimeout(timeoutId);
-  }, [email]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isValidEmail) return;
+    if (!email) return;
 
     setError("");
     setMessage("");
     setLoading(true);
 
-    const res = await signIn("nodemailer", {
-      email: email,
-      redirect: false,
-      callbackUrl: "/dashboard",
-    });
+    try {
+      const result = await signIn("nodemailer", {
+        email,
+        redirect: false,
+        callbackUrl: "/dashboard",
+      });
 
-    setLoading(false);
-    if (res?.error) {
-      setError("Failed to send login email.");
-    } else {
-      setMessage("Check your email! You should receive a login link shortly.");
-      setEmail("");
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        setMessage("Check your email for login instructions");
+      }
+    } catch (err) {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 shadow-lg dark:shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
-      <div className="bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-400 rounded-xl overflow-hidden flex flex-col lg:flex-row w-full lg:max-w-6xl shadow-2xl lg:mx-0 md:mx-4 mx-2">
+      <div className="bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-400 rounded-xl overflow-hidden flex flex-col lg:flex-row w-full lg:max-w-6xl shadow-2xl">
         <div className="hidden lg:block relative lg:w-1/2">
           <Image
             src="/Phones.jpg"
-            alt="Shopping illustration"
+            alt="Login illustration"
             fill
             className="object-cover"
           />
@@ -90,30 +59,23 @@ export default function LoginPage() {
             <Smartphone className="h-12 w-12 text-purple-600" />
             <p className="mt-1 text-gray-600 dark:text-gray-100">
               Welcome to{" "}
-              <span className="font-semibold text-gray-900 dark:text-white">
-                <i>Floridda Software</i>
-              </span>
+              <span className="font-semibold">Floridda Software</span>
             </p>
           </div>
 
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
+          <h2 className="text-xl font-semibold mb-6 text-center text-gray-900 dark:text-white">
             Login To Dashboard
           </h2>
           <hr className="border-gray-300 mb-6" />
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Enter Address
+              <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                Enter Email Address
               </label>
               <input
-                id="email"
-                name="email"
                 type="email"
-                placeholder="Enter Email Address"
+                placeholder="your@email.com"
                 className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-950"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -124,24 +86,20 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className={`w-full py-3 text-white rounded-lg font-medium transition ${
-                isValidEmail
-                  ? "bg-purple-600 hover:bg-purple-700 cursor-pointer"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-              disabled={loading || !isValidEmail}
+              className="w-full py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400"
+              disabled={loading}
             >
               {loading ? "Sending..." : "Login"}
             </button>
 
             {error && (
-              <div className="bg-red-500 text-white w-fit text-sm py-1 px-3 rounded-md mt-2">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {error}
               </div>
             )}
 
             {message && (
-              <div className="bg-green-500 text-white w-fit text-sm py-1 px-3 rounded-md mt-2">
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
                 {message}
               </div>
             )}

@@ -1,24 +1,27 @@
 import { auth } from "@/auth";
 
-export async function GET(request) {
-  const session = await auth();
-  console.log(`Auth-check session: ${JSON.stringify(session)}`);
+export async function GET() {
+  try {
+    const session = await auth();
 
-  if (session?.user) {
-    return new Response(
-      JSON.stringify({
+    if (session?.user) {
+      return Response.json({
         authenticated: true,
         role: session.user.role,
-      }),
+        name: session.user.name,
+        email: session.user.email,
+      });
+    }
+
+    return Response.json({ authenticated: false });
+  } catch (error) {
+    console.error("Auth check error:", error);
+    return Response.json(
       {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
+        authenticated: false,
+        error: "Server error",
+      },
+      { status: 500 }
     );
   }
-
-  return new Response(JSON.stringify({ authenticated: false }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
 }

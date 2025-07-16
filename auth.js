@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { cert } from "firebase-admin/app";
 
 const ADMIN_EMAIL = "floriddasoftware@gmail.com";
 
@@ -20,75 +21,98 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       from: process.env.EMAIL_FROM,
     }),
   ],
-  adapter: FirestoreAdapter(adminDb),
+  adapter: FirestoreAdapter({
+    credential: cert({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.AUTH_FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.AUTH_FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    }),
+  }),
   pages: { signIn: "/login" },
   callbacks: {
     async signIn({ user }) {
       console.log(`Sign-in attempt for email: ${user.email}`);
-      if (user.email === ADMIN_EMAIL) {
-        console.log("Admin email detected, allowing sign-in.");
-        return true;
-      }
       try {
+        if (user.email === ADMIN_EMAIL) {
+          console.log("Admin login allowed");
+          return true;
+        }
+
         const querySnapshot = await adminDb
           .collection("users")
           .where("email", "==", user.email)
           .where("role", "==", "salesperson")
           .get();
-        const allowed = !querySnapshot.empty;
-        console.log(`Salesperson check: ${allowed ? "Allowed" : "Denied"}`);
-        return allowed;
+
+        return !querySnapshot.empty;
       } catch (error) {
-        console.error("Error checking user role:", error);
+        console.error("Error during sign-in:", error);
         return false;
       }
     },
     async session({ session }) {
-      const { email } = session.user;
-      console.log(`Setting session for email: ${email}`);
       try {
+        if (!session.user?.email) return session;
+
+        const email = session.user.email;
+        let userRecord;
+
+        if (email === ADMIN_EMAIL) {
+          session.user = {
+            ...session.user,
+            role: "admin",
+            name: "Floridda Admin",
+            branchId: null,
+          };
+
+          try {
+            await adminDb.collection("users").doc(email).set(
+              {
+                email,
+                role: "admin",
+                name: "Floridda Admin",
+                createdAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          } catch (e) {
+            console.error("Error creating admin record:", e);
+          }
+          return session;
+        }
+
         const userQuery = await adminDb
           .collection("users")
           .where("email", "==", email)
+          .limit(1)
           .get();
+
         if (!userQuery.empty) {
-          const userData = userQuery.docs[0].data();
-          session.user.role = userData.role || "unknown";
-          session.user.name = userData.name || "N/A";
-          session.user.branchId = userData.branchId || null;
-          console.log(`User found: ${JSON.stringify(userData)}`);
-        } else if (email === ADMIN_EMAIL) {
-          session.user.role = "admin";
-          session.user.name = "Floridda";
-          session.user.branchId = null;
-          console.log("Admin not in DB, setting role and adding to users.");
-          await adminDb.collection("users").doc(email).set(
-            {
-              email,
-              role: "admin",
-              name: "Floridda",
-            },
-            { merge: true }
-          );
+          userRecord = userQuery.docs[0].data();
+          session.user = {
+            ...session.user,
+            role: userRecord.role || "unknown",
+            name: userRecord.name || "Unknown",
+            branchId: userRecord.branchId || null,
+          };
         } else {
           session.user.role = "unknown";
-          session.user.name = "N/A";
-          session.user.branchId = null;
-          console.log("User not found and not admin, setting role to unknown.");
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
-        session.user.role = "unknown";
-        session.user.name = "N/A";
-        session.user.branchId = null;
+        console.error("Session callback error:", error);
+        session.user.role = "error";
       }
-      console.log(`Final session role: ${session.user.role}`);
       return session;
     },
-    async redirect({ baseUrl }) {
-      console.log(`Redirecting to: ${baseUrl}/dashboard`);
-      return `${baseUrl}/dashboard`;
+    async redirect({ url, baseUrl }) {
+      return url.startsWith(baseUrl) ? url : baseUrl + "/dashboard";
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, 
+    updateAge: 24 * 60 * 60, 
+  },
+  debug: process.env.NODE_ENV === "development",
 });
