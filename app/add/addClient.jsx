@@ -57,7 +57,7 @@ export default function AddClient({ initialSalespersons = [] }) {
     );
 
     const unsubscribeSalespersons = onSnapshot(
-      collection(db, "salespeople"),
+      query(collection(db, "users"), where("role", "==", "salesperson")),
       (snapshot) => {
         setSalespersons(
           snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -91,14 +91,13 @@ export default function AddClient({ initialSalespersons = [] }) {
     }
     setLoading(true);
     try {
-      // Check for duplicate email
       const emailQuery = query(
-        collection(db, "salespeople"),
+        collection(db, "users"),
         where("email", "==", formData.email)
       );
       const emailSnapshot = await getDocs(emailQuery);
       if (!emailSnapshot.empty) {
-        toast.error("A salesperson with this email already exists.");
+        toast.error("A user with this email already exists.");
         setLoading(false);
         return;
       }
@@ -112,7 +111,7 @@ export default function AddClient({ initialSalespersons = [] }) {
         addedBy: session.user.email,
         createdAt: new Date().toISOString(),
       };
-      await addDoc(collection(db, "salespeople"), newSalesperson);
+      await addDoc(collection(db, "users"), newSalesperson);
       toast.success("Salesperson added successfully!");
       setFormData({ email: "", name: "", phone: "", branchId: "" });
       setShowAddModal(false);
@@ -143,7 +142,7 @@ export default function AddClient({ initialSalespersons = [] }) {
     }
     setLoading(true);
     try {
-      await deleteDoc(doc(db, "salespeople", salespersonToDelete.id));
+      await deleteDoc(doc(db, "users", salespersonToDelete.id));
       toast.success("Salesperson deleted successfully!");
     } catch (error) {
       console.error("Error deleting salesperson:", error);

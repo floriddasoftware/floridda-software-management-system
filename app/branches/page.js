@@ -13,7 +13,10 @@ async function fetchBranches() {
 
 async function fetchSalespersons() {
   try {
-    const snapshot = await adminDb.collection("salespeople").get();
+    const snapshot = await adminDb
+      .collection("users")
+      .where("role", "==", "salesperson")
+      .get();
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Error fetching salespersons:", error);
