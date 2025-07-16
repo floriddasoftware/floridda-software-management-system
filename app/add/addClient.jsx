@@ -17,38 +17,45 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useSession } from "next-auth/react";
 
-export default function AddClient({ initialSalespersons }) {
+export default function AddClient({ initialSalespersons = [] }) {
   const { data: session } = useSession();
-  const [salespersons, setSalespersons] = useState(initialSalespersons || []);
-  const [formData, setFormData] = useState({ email: "", name: "", phone: "" });
+  const [salespersons, setSalespersons] = useState(initialSalespersons);
+  const [formData, setFormData] = useState({
+    email: "",
+    name: "",
+    phone: "",
+    branchId: "",
+  });
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [salespersonToDelete, setSalespersonToDelete] = useState(null);
 
-  // Real-time listener for salespeople
   useEffect(() => {
     if (session?.user?.role === "admin") {
-      const unsubscribe = onSnapshot(
-        collection(db, "salespeople"),
+      const unsubscribeBranches = onSnapshot(
+        collection(db, "branches"),
         (snapshot) => {
-          const salespersonsData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          console.log("Real-time salespersons:", salespersonsData);
-          setSalespersons(salespersonsData);
-        },
-        (error) => {
-          console.error("Error in real-time listener:", error);
-          toast.error("Failed to fetch salespeople in real-time.");
+          setBranches(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
         }
       );
-      return () => unsubscribe();
-    } else {
-      setSalespersons(initialSalespersons || []);
+      const unsubscribeSalespersons = onSnapshot(
+        collection(db, "salespeople"),
+        (snapshot) => {
+          setSalespersons(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        }
+      );
+      return () => {
+        unsubscribeBranches();
+        unsubscribeSalespersons();
+      };
     }
-  }, [session, initialSalespersons]);
+  }, [session]);
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -56,34 +63,34 @@ export default function AddClient({ initialSalespersons }) {
       toast.error("Unauthorized action");
       return;
     }
-
+    if (!formData.email.trim() || !formData.name.trim() || !formData.branchId) {
+      toast.error("Email, name, and branch are required.");
+      return;
+    }
     setLoading(true);
     try {
       const newSalesperson = {
-        ...formData,
+        email: formData.email,
+        name: formData.name,
+        phone: formData.phone,
+        branchId: formData.branchId,
         role: "salesperson",
         addedBy: session.user.email,
-        branchId: "dutse",
       };
-
-      const docRef = await addDoc(
-        collection(db, "salespeople"),
-        newSalesperson
-      );
+      await addDoc(collection(db, "salespeople"), newSalesperson);
       toast.success("Salesperson added successfully!");
-      setFormData({ email: "", name: "", phone: "" });
+      setFormData({ email: "", name: "", phone: "", branchId: "" });
       setShowAddModal(false);
     } catch (error) {
-      toast.error("Failed to add salesperson.");
       console.error("Error adding salesperson:", error);
+      toast.error("Failed to add salesperson.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleDelete = (salesperson) => {
     if (!session || session.user.role !== "admin") {
@@ -99,7 +106,6 @@ export default function AddClient({ initialSalespersons }) {
       toast.error("Unauthorized action");
       return;
     }
-
     setLoading(true);
     try {
       await deleteDoc(doc(db, "salespeople", salespersonToDelete.id));
@@ -118,6 +124,12 @@ export default function AddClient({ initialSalespersons }) {
     { key: "name", label: "Name" },
     { key: "email", label: "Email" },
     { key: "phone", label: "Phone" },
+    {
+      key: "branchId",
+      label: "Branch",
+      render: (row) =>
+        branches.find((b) => b.id === row.branchId)?.name || "Unknown",
+    },
   ];
 
   const actions = [
@@ -130,16 +142,14 @@ export default function AddClient({ initialSalespersons }) {
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Manage Salespeople
       </h1>
-
       <div className="flex justify-end mb-8">
         <Button
           onClick={() => setShowAddModal(true)}
-          disabled={loading || (session && session.user.role !== "admin")}
+          disabled={loading || session?.user?.role !== "admin"}
         >
           Add Salesperson
         </Button>
       </div>
-
       {salespersons.length > 0 ? (
         <Table columns={columns} data={salespersons} actions={actions} />
       ) : (
@@ -147,7 +157,6 @@ export default function AddClient({ initialSalespersons }) {
           No salespeople available.
         </p>
       )}
-
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -178,6 +187,24 @@ export default function AddClient({ initialSalespersons }) {
             onChange={handleChange}
             disabled={loading}
           />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Branch
+            <select
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={loading}
+            >
+              <option value="">Select Branch</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name} ({branch.location})
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="flex justify-end space-x-2">
             <Button onClick={() => setShowAddModal(false)} disabled={loading}>
               Cancel
@@ -188,7 +215,6 @@ export default function AddClient({ initialSalespersons }) {
           </div>
         </form>
       </Modal>
-
       <Modal
         isOpen={showConfirmDelete}
         onClose={() => setShowConfirmDelete(false)}

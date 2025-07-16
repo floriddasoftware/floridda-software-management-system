@@ -18,14 +18,12 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function ManageBranches({
-  initialBranches,
-  initialSalespersons,
-  initialProducts,
+  initialBranches = [],
+  initialSalespersons = [],
+  initialProducts = [],
 }) {
   const { data: session } = useSession();
-  const [branches, setBranches] = useState(initialBranches || []);
-  const [salespersons, setSalespersons] = useState(initialSalespersons || []);
-  const [products, setProducts] = useState(initialProducts || []);
+  const [branches, setBranches] = useState(initialBranches);
   const [formData, setFormData] = useState({ name: "", location: "" });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -33,24 +31,36 @@ export default function ManageBranches({
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Handle input changes
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  useEffect(() => {
+    if (session?.user?.role === "admin") {
+      const fetchBranches = async () => {
+        try {
+          const snapshot = await getDocs(collection(db, "branches"));
+          setBranches(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        } catch (error) {
+          console.error("Error fetching branches:", error);
+          toast.error("Failed to load branches.");
+        }
+      };
+      fetchBranches();
+    }
+  }, [session]);
 
-  // Add a new branch
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+
   const handleAddBranch = async (e) => {
     e.preventDefault();
     if (!session || session.user.role !== "admin") {
       toast.error("Unauthorized action");
       return;
     }
-
     if (!formData.name.trim() || !formData.location.trim()) {
-      toast.error("Please provide both branch name and location.");
+      toast.error("Branch name and location are required.");
       return;
     }
-
     setLoading(true);
     try {
       const newBranch = { name: formData.name, location: formData.location };
@@ -67,7 +77,6 @@ export default function ManageBranches({
     }
   };
 
-  // Initiate edit branch
   const handleEdit = (branch) => {
     if (!session || session.user.role !== "admin") {
       toast.error("Unauthorized action");
@@ -78,7 +87,6 @@ export default function ManageBranches({
     setShowEditModal(true);
   };
 
-  // Update branch
   const handleUpdateBranch = async (e) => {
     e.preventDefault();
     if (!session || session.user.role !== "admin") {
@@ -86,10 +94,9 @@ export default function ManageBranches({
       return;
     }
     if (!formData.name.trim() || !formData.location.trim()) {
-      toast.error("Please provide both branch name and location.");
+      toast.error("Branch name and location are required.");
       return;
     }
-
     setLoading(true);
     try {
       const updatedBranch = {
@@ -114,7 +121,6 @@ export default function ManageBranches({
     }
   };
 
-  // Initiate delete branch
   const handleDelete = (branch) => {
     if (!session || session.user.role !== "admin") {
       toast.error("Unauthorized action");
@@ -124,13 +130,11 @@ export default function ManageBranches({
     setShowConfirmDelete(true);
   };
 
-  // Confirm and delete branch
   const confirmDelete = async () => {
     if (!selectedBranch || !session || session.user.role !== "admin") {
       toast.error("Unauthorized action");
       return;
     }
-
     setLoading(true);
     try {
       await deleteDoc(doc(db, "branches", selectedBranch.id));
@@ -167,14 +171,11 @@ export default function ManageBranches({
           Add Branch
         </Button>
       </div>
-
       {branches.length > 0 ? (
         <Table columns={columns} data={branches} actions={actions} />
       ) : (
         <p className="text-gray-900 dark:text-white">No branches added yet.</p>
       )}
-
-      {/* Add Branch Modal */}
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -215,8 +216,6 @@ export default function ManageBranches({
           </div>
         </form>
       </Modal>
-
-      {/* Edit Branch Modal */}
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -257,8 +256,6 @@ export default function ManageBranches({
           </div>
         </form>
       </Modal>
-
-      {/* Confirm Delete Modal */}
       <Modal
         isOpen={showConfirmDelete}
         onClose={() => setShowConfirmDelete(false)}

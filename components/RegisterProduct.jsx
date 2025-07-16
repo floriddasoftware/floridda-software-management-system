@@ -1,7 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebaseConfig";
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  doc,
+  getDocs,
+} from "firebase/firestore";
 import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
@@ -27,11 +33,27 @@ export default function RegisterProduct({
     category: "",
     subCategory: "",
     description: "",
+    branchId: "",
   });
+  const [branches, setBranches] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const isEditing = !!productToEdit;
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "branches"));
+        setBranches(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      } catch (error) {
+        console.error("Error fetching branches:", error);
+        toast.error("Failed to fetch branches.");
+      }
+    };
+    fetchBranches();
+  }, []);
 
   useEffect(() => {
     if (productToEdit) {
@@ -47,6 +69,7 @@ export default function RegisterProduct({
         category: productToEdit.category || "",
         subCategory: productToEdit.subCategory || "",
         description: productToEdit.description || "",
+        branchId: productToEdit.branchId || "",
       });
     } else {
       setFormData({
@@ -61,9 +84,10 @@ export default function RegisterProduct({
         category: "",
         subCategory: "",
         description: "",
+        branchId: branches.length === 1 ? branches[0]?.id : "",
       });
     }
-  }, [productToEdit]);
+  }, [productToEdit, branches]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,7 +106,8 @@ export default function RegisterProduct({
       !formData.modelNumber.trim() ||
       !formData.category.trim() ||
       !formData.subCategory.trim() ||
-      formData.serialNumbers.length !== quantity
+      formData.serialNumbers.length !== quantity ||
+      !formData.branchId
     ) {
       setError(
         "Please fill in all required fields and ensure serial numbers match quantity."
@@ -125,7 +150,7 @@ export default function RegisterProduct({
         subCategory: formData.subCategory,
         description: formData.description,
         owner: session?.user?.email || "",
-        branchId: "dutse", 
+        branchId: formData.branchId,
       };
 
       let savedProduct;
@@ -156,9 +181,8 @@ export default function RegisterProduct({
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleSerialNumbersChange = (e) => {
     const serials = e.target.value
@@ -272,6 +296,24 @@ export default function RegisterProduct({
             onChange={handleChange}
             disabled={loading}
           />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Branch
+            <select
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={loading}
+            >
+              <option value="">Select Branch</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name} ({branch.location})
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="md:col-span-2 space-y-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

@@ -20,9 +20,9 @@ import { useSearch } from "@/context/SearchContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function SalesClient({ initialProducts }) {
+export default function SalesClient({ initialProducts = [] }) {
   const { data: session } = useSession();
-  const [products, setProducts] = useState(initialProducts || []);
+  const [products, setProducts] = useState(initialProducts);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [sellQuantity, setSellQuantity] = useState("");
   const [selectedSerialNumber, setSelectedSerialNumber] = useState("");
@@ -37,46 +37,24 @@ export default function SalesClient({ initialProducts }) {
   useEffect(() => {
     let unsubscribe;
     if (session?.user?.role === "admin") {
-      unsubscribe = onSnapshot(
-        collection(db, "products"),
-        (snapshot) => {
-          const productsData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setProducts(productsData);
-        },
-        (error) => {
-          console.error("Error fetching products:", error);
-          toast.error("Failed to load products.");
-        }
-      );
+      unsubscribe = onSnapshot(collection(db, "products"), (snapshot) => {
+        setProducts(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      });
     } else if (session?.user?.branchId) {
       const q = query(
         collection(db, "products"),
         where("branchId", "==", session.user.branchId)
       );
-      unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const productsData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setProducts(productsData);
-        },
-        (error) => {
-          console.error("Error fetching products:", error);
-          toast.error("Failed to load products.");
-        }
-      );
-    } else {
-      setProducts(initialProducts || []);
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        setProducts(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      });
     }
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [session, initialProducts]);
+    return () => unsubscribe && unsubscribe();
+  }, [session]);
 
   const filteredProducts = products.filter((product) =>
     product.item.toLowerCase().includes(searchTerm.toLowerCase())
@@ -103,33 +81,28 @@ export default function SalesClient({ initialProducts }) {
       toast.error("Invalid quantity or serial number.");
       return;
     }
-
     if (!session) {
       setError("Authentication required");
       toast.error("Please log in.");
       return;
     }
-
     if (paymentMethod === "transfer" && !receiptFile) {
       setError("Please upload a transfer receipt.");
       toast.error("Receipt required for transfer.");
       return;
     }
-
-    const salespersonBranchId = session.user.branchId || "dutse";
-    if (
-      selectedProduct.branchId !== salespersonBranchId &&
-      session.user.role !== "admin"
-    ) {
-      setError("You can only sell products from your assigned branch.");
-      toast.error("Branch mismatch.");
-      return;
-    }
-
     const quantityToSell = parseInt(sellQuantity);
     if (quantityToSell > selectedProduct.quantity) {
       setError("Cannot sell more than available quantity!");
       toast.error("Quantity exceeds stock.");
+      return;
+    }
+    if (
+      session.user.role !== "admin" &&
+      selectedProduct.branchId !== session.user.branchId
+    ) {
+      setError("You can only sell products from your assigned branch.");
+      toast.error("Branch mismatch.");
       return;
     }
 
@@ -176,7 +149,7 @@ export default function SalesClient({ initialProducts }) {
         totalAmount: quantityToSell * selectedProduct.salePrice,
         serialNumberSold: selectedSerialNumber,
         salespersonId: session.user.email,
-        branchId: selectedProduct.branchId || "dutse",
+        branchId: selectedProduct.branchId,
         paymentMethod,
         receiptUrl,
         timestamp: new Date().toISOString(),
@@ -243,7 +216,6 @@ export default function SalesClient({ initialProducts }) {
       ) : (
         <p className="text-gray-900 dark:text-white">No products found.</p>
       )}
-
       <Modal
         isOpen={showSellModal}
         onClose={() => setShowSellModal(false)}
@@ -275,7 +247,6 @@ export default function SalesClient({ initialProducts }) {
               </option>
             ))}
           </select>
-          -Bass{" "}
         </label>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">
           Payment Method:
@@ -313,7 +284,6 @@ export default function SalesClient({ initialProducts }) {
           </Button>
         </div>
       </Modal>
-
       <Modal
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
@@ -358,9 +328,6 @@ export default function SalesClient({ initialProducts }) {
             <p>
               <strong>Description:</strong>{" "}
               {selectedProduct.description || "N/A"}
-            </p>
-            <p>
-              <strong>Branch:</strong> {selectedProduct.branchId || "Dutse"}
             </p>
           </div>
         )}
