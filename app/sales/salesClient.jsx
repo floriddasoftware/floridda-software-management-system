@@ -35,8 +35,10 @@ export default function SalesClient({ initialProducts = [] }) {
   const { searchTerm } = useSearch();
 
   useEffect(() => {
+    if (!session) return;
+
     let unsubscribe;
-    if (session?.user?.role === "admin") {
+    if (session.user.role === "admin") {
       unsubscribe = onSnapshot(
         collection(db, "products"),
         (snapshot) => {
@@ -49,7 +51,7 @@ export default function SalesClient({ initialProducts = [] }) {
           toast.error("Failed to load products.");
         }
       );
-    } else if (session?.user?.branchId) {
+    } else if (session.user.branchId) {
       const q = query(
         collection(db, "products"),
         where("branchId", "==", session.user.branchId)
@@ -137,6 +139,7 @@ export default function SalesClient({ initialProducts = [] }) {
         (sn) => sn !== selectedSerialNumber
       );
 
+      // Update product quantity or delete if sold out
       if (newQuantity > 0) {
         await updateDoc(doc(db, "products", selectedProduct.id), {
           quantity: newQuantity,
@@ -216,6 +219,10 @@ export default function SalesClient({ initialProducts = [] }) {
     { label: "View", onClick: handleView },
   ];
 
+  if (!session) {
+    return <p className="text-gray-900 dark:text-white p-4">Loading...</p>;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <ToastContainer />
@@ -246,6 +253,7 @@ export default function SalesClient({ initialProducts = [] }) {
           min="1"
           max={selectedProduct?.quantity}
           disabled={loading}
+          aria-label="Quantity to sell"
         />
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Select Serial Number to Sell:

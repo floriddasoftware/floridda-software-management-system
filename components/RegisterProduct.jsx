@@ -146,19 +146,22 @@ export default function RegisterProduct({
 
     try {
       const productData = {
-        item: formData.item,
+        item: formData.item.trim(),
         quantity,
         costPrice,
         salePrice,
-        modelNumber: formData.modelNumber,
+        modelNumber: formData.modelNumber.trim(),
         serialNumbers: formData.serialNumbers,
-        color: formData.color,
-        storage: formData.storage,
-        category: formData.category,
-        subCategory: formData.subCategory,
-        description: formData.description,
+        color: formData.color.trim(),
+        storage: formData.storage.trim(),
+        category: formData.category.trim(),
+        subCategory: formData.subCategory.trim(),
+        description: formData.description.trim(),
         owner: session?.user?.email || "",
         branchId: formData.branchId,
+        createdAt: isEditing
+          ? productToEdit.createdAt
+          : new Date().toISOString(),
       };
 
       let savedProduct;
@@ -199,6 +202,19 @@ export default function RegisterProduct({
       .filter((s) => s);
     setFormData({ ...formData, serialNumbers: serials });
   };
+
+  if (!session || session.user.role !== "admin") {
+    return (
+      <Modal isOpen={true} onClose={onClose} title="Unauthorized">
+        <p className="text-gray-700 dark:text-gray-300">
+          You do not have permission to register or edit products.
+        </p>
+        <div className="flex justify-end mt-4">
+          <Button onClick={onClose}>Close</Button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal

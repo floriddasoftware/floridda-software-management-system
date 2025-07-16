@@ -33,41 +33,43 @@ export default function AddClient({ initialSalespersons = [] }) {
   const [salespersonToDelete, setSalespersonToDelete] = useState(null);
 
   useEffect(() => {
-    if (session?.user?.role === "admin") {
-      const unsubscribeBranches = onSnapshot(
-        collection(db, "branches"),
-        (snapshot) => {
-          const branchData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setBranches(branchData);
-          if (branchData.length === 1) {
-            setFormData((prev) => ({ ...prev, branchId: branchData[0].id }));
-          }
-        },
-        (error) => {
-          console.error("Error fetching branches:", error);
-          toast.error("Failed to load branches.");
+    if (!session || session.user.role !== "admin") return;
+
+    const unsubscribeBranches = onSnapshot(
+      collection(db, "branches"),
+      (snapshot) => {
+        const branchData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setBranches(branchData);
+        if (branchData.length === 1) {
+          setFormData((prev) => ({ ...prev, branchId: branchData[0].id }));
         }
-      );
-      const unsubscribeSalespersons = onSnapshot(
-        collection(db, "salespeople"),
-        (snapshot) => {
-          setSalespersons(
-            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-          );
-        },
-        (error) => {
-          console.error("Error fetching salespeople:", error);
-          toast.error("Failed to load salespeople.");
-        }
-      );
-      return () => {
-        unsubscribeBranches();
-        unsubscribeSalespersons();
-      };
-    }
+      },
+      (error) => {
+        console.error("Error fetching branches:", error);
+        toast.error("Failed to load branches.");
+      }
+    );
+
+    const unsubscribeSalespersons = onSnapshot(
+      collection(db, "salespeople"),
+      (snapshot) => {
+        setSalespersons(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      },
+      (error) => {
+        console.error("Error fetching salespeople:", error);
+        toast.error("Failed to load salespeople.");
+      }
+    );
+
+    return () => {
+      unsubscribeBranches();
+      unsubscribeSalespersons();
+    };
   }, [session]);
 
   const handleAddSubmit = async (e) => {
@@ -87,12 +89,13 @@ export default function AddClient({ initialSalespersons = [] }) {
     setLoading(true);
     try {
       const newSalesperson = {
-        email: formData.email,
-        name: formData.name,
-        phone: formData.phone,
+        email: formData.email.trim(),
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
         branchId: formData.branchId,
         role: "salesperson",
         addedBy: session.user.email,
+        createdAt: new Date().toISOString(),
       };
       await addDoc(collection(db, "salespeople"), newSalesperson);
       toast.success("Salesperson added successfully!");
@@ -153,6 +156,18 @@ export default function AddClient({ initialSalespersons = [] }) {
     { onClick: handleDelete, icon: <Trash className="w-5 h-5 text-red-600" /> },
   ];
 
+  if (!session) {
+    return <p className="text-gray-900 dark:text-white p-4">Loading...</p>;
+  }
+
+  if (session.user.role !== "admin") {
+    return (
+      <p className="text-gray-900 dark:text-white p-4">
+        You do not have permission to view this page.
+      </p>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
       <ToastContainer />
@@ -162,7 +177,8 @@ export default function AddClient({ initialSalespersons = [] }) {
       <div className="flex justify-end mb-8">
         <Button
           onClick={() => setShowAddModal(true)}
-          disabled={loading || session?.user?.role !== "admin"}
+          disabled={loading}
+          aria-label="Add Salesperson"
         >
           Add Salesperson
         </Button>
@@ -185,7 +201,6 @@ export default function AddClient({ initialSalespersons = [] }) {
             name="email"
             type="email"
             value={formData.email}
-            on的可
             onChange={handleChange}
             required
             disabled={loading}
@@ -241,7 +256,7 @@ export default function AddClient({ initialSalespersons = [] }) {
         <p className="mb-4 text-gray-700 dark:text-gray-300">
           Are you sure you want to remove this salesperson?
         </p>
-        <div className="flex justify-end space-x-2">
+        <div className="space-x-2">
           <Button
             onClick={() => setShowConfirmDelete(false)}
             disabled={loading}
@@ -250,7 +265,7 @@ export default function AddClient({ initialSalespersons = [] }) {
           </Button>
           <Button
             onClick={confirmDelete}
-            className="bg-red-600 hover:bg-red-Brit7"
+            className="bg-red-600 hover:bg-red-700"
             disabled={loading}
           >
             {loading ? "Removing..." : "Remove"}
